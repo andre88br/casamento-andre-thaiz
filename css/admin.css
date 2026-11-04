@@ -56,7 +56,7 @@ input[type=checkbox]{width:20px;height:20px;padding:0}
 .stat span{font-size:.75rem;color:var(--muted)}
 .filtros{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px}
 .tabela{overflow-x:auto;background:var(--paper);border:1px solid var(--line);border-radius:12px}
-table{border-collapse:collapse;width:100%;min-width:600px}
+table{border-collapse:collapse;width:100%;min-width:860px}
 th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px}
 td{padding:3px 4px;border-top:1px solid var(--line)}
 td input,td select{border-color:transparent;background:transparent;padding:6px}

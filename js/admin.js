@@ -70,12 +70,22 @@
     const l = a.linhas || [[""]];
     return { nome: a.nome, icone: "📄", secoes: [{ titulo: a.nome, tipo: "cards", colunas: l[0].map((n) => ({ nome: n || "Campo", tipo: "texto" })), linhas: l.slice(1) }] };
   }
+  // Garante que a lista de convidados tenha todas as colunas atuais (ex.: Telefone, E-mail), preservando os dados salvos.
+  function sincronizaConvidados() {
+    const novo = window.SEED.abas.flatMap((a) => a.secoes).find((s) => s.guests);
+    const sec = abas.flatMap((a) => a.secoes).find((s) => s.guests);
+    if (!novo || !sec || novo.colunas.every((c, i) => sec.colunas[i] && sec.colunas[i].nome === c.nome)) return false;
+    const antigos = sec.colunas.map((c) => c.nome);
+    sec.linhas = sec.linhas.map((l) => novo.colunas.map((c) => { const j = antigos.indexOf(c.nome); return j >= 0 ? l[j] : ""; }));
+    sec.colunas = clone(novo.colunas);
+    return true;
+  }
   function entrar(p, usuario) {
     $("auth").hidden = true; $("app").hidden = false;
     if (usuario) $("eu").textContent = usuario;
     else api("usuarios").then((u) => u.ok && ($("eu").textContent = u.eu));
     versao = p.versao || 0; atual = 0; sujo = false;
-    if (p.abas && p.abas.length) abas = p.abas.map(migrar);
+    if (p.abas && p.abas.length) { abas = p.abas.map(migrar); if (sincronizaConvidados()) sujo = true; }
     else { abas = clone(window.SEED.abas); sujo = true; } // primeira vez: carrega o conteúdo da planilha
     marcar(sujo); montar();
   }
@@ -126,6 +136,8 @@
       inp.oninput = () => set(inp.value);
     } else {
       inp = el("input", { value: linha[i] ?? "", placeholder: opts.placeholder || "" });
+      if (col.tipo === "telefone") { inp.type = "tel"; inp.autocomplete = "off"; inp.placeholder = opts.placeholder || "(34) 99999-9999"; }
+      if (col.tipo === "email") { inp.type = "email"; inp.autocomplete = "off"; inp.placeholder = opts.placeholder || "nome@email.com"; }
       if (col.tipo === "numero") { inp.inputMode = "decimal"; inp.oninput = () => { const n = num(inp.value); set(inp.value.trim() !== "" && !isNaN(n) && /^[\d.,\s]+$/.test(inp.value) ? n : inp.value); opts.onchange && opts.onchange(); }; }
       else inp.oninput = () => set(inp.value);
     }
@@ -219,9 +231,20 @@
       const ix = (re) => h.findIndex((x) => re.test(x));
       const [iN, iT, iC, iQ, iF] = [ix(/convidad|nome/), ix(/tipo/), ix(/categoria/), ix(/de quem/), ix(/confirma/)];
       const cap = (v, ops) => ops.find((o) => o.toLowerCase() === String(v).trim().toLowerCase()) || "";
+      const [iTel, iMail] = [ix(/telefone|celular|whats/), ix(/e-?mail/)];
+      const col = (n) => s.colunas.findIndex((c) => c.nome === n);
+      const opc = (n) => s.colunas[col(n)].opcoes;
       const out = rows.slice(1).filter((r) => String(r[iN] ?? "").trim()).map((r) => {
         const conf = String(iF >= 0 ? r[iF] : "").trim().toLowerCase();
-        return [String(r[iN]).trim(), cap(iT >= 0 ? r[iT] : "", s.colunas[1].opcoes), cap(iC >= 0 ? r[iC] : "", s.colunas[2].opcoes), cap(iQ >= 0 ? r[iQ] : "", s.colunas[3].opcoes), /^(sim|confirm)/.test(conf) ? "Confirmado" : /^(n[aã]o|recus)/.test(conf) ? "Recusou" : "Pendente"];
+        const l = s.colunas.map(() => "");
+        l[col("Convidado")] = String(r[iN]).trim();
+        l[col("Tipo")] = cap(iT >= 0 ? r[iT] : "", opc("Tipo"));
+        l[col("Categoria")] = cap(iC >= 0 ? r[iC] : "", opc("Categoria"));
+        l[col("De quem")] = cap(iQ >= 0 ? r[iQ] : "", opc("De quem"));
+        l[col("Confirmação")] = /^(sim|confirm)/.test(conf) ? "Confirmado" : /^(n[aã]o|recus)/.test(conf) ? "Recusou" : "Pendente";
+        if (iTel >= 0) l[col("Telefone")] = String(r[iTel]).trim();
+        if (iMail >= 0) l[col("E-mail")] = String(r[iMail]).trim();
+        return l;
       });
       s.linhas.push(...out); marcar(); montar();
     };

@@ -624,6 +624,14 @@ window.SEED = {
        "tipo": "texto"
       },
       {
+       "nome": "Telefone",
+       "tipo": "telefone"
+      },
+      {
+       "nome": "E-mail",
+       "tipo": "email"
+      },
+      {
        "nome": "Tipo",
        "tipo": "opcoes",
        "opcoes": [
