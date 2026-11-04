@@ -23,51 +23,30 @@
   </main>
 
   <!-- APP -->
-  <div id="app" hidden>
-    <header class="top">
-      <strong>A✈T · Planejamento</strong>
-      <nav>
-        <button class="tab on" data-tab="lista">Planilha</button>
-        <button class="tab" data-tab="usuarios">Usuários</button>
-        <button class="btn btn--ghost" id="logout">Sair (<span id="eu"></span>)</button>
-      </nav>
-    </header>
-
-    <section id="tab-lista" class="wrap">
-      <div class="abas" id="abas"></div>
-      <div class="stats" id="stats"></div>
-      <div class="acoes">
-        <input id="f-busca" type="search" placeholder="Buscar nesta aba…" />
-        <button class="btn" id="add-linha">+ Linha</button>
-        <button class="btn btn--ghost" id="add-col">+ Coluna</button>
-        <button class="btn btn--ghost" id="ren-aba">Renomear aba</button>
-        <button class="btn btn--ghost" id="del-aba">Excluir aba</button>
+  <div id="app" class="app" hidden>
+    <aside class="side" id="side">
+      <div class="brand">A<span>✈</span>T <small>Planejamento</small></div>
+      <nav id="menu"></nav>
+      <div class="side__foot">
+        <button class="item" id="m-usuarios"><i>🔑</i> Usuários</button>
+        <button class="item" id="exp"><i>⬇️</i> Exportar .xlsx</button>
+        <button class="item" id="logout"><i>🚪</i> Sair (<span id="eu"></span>)</button>
       </div>
-      <div class="tabela"><table id="grade"></table></div>
-      <div class="acoes">
-        <button class="btn" id="salvar" disabled>Salvar alterações</button>
+    </aside>
+    <div class="main">
+      <header class="bar">
+        <button class="burger" id="burger" aria-label="Menu">☰</button>
+        <h1 id="titulo"></h1>
         <span class="hint" id="status"></span>
-        <span class="espaco"></span>
-        <label class="btn btn--ghost">Importar .xlsx<input type="file" id="imp" accept=".xlsx,.xls" hidden /></label>
-        <button class="btn btn--ghost" id="exp">Exportar .xlsx</button>
-      </div>
-    </section>
-
-    <section id="tab-usuarios" class="wrap" hidden>
-      <h2>Usuários com acesso</h2>
-      <ul class="users" id="users"></ul>
-      <form class="card" id="user-form">
-        <h3>Criar novo usuário</h3>
-        <label>Usuário <input id="n-user" autocomplete="off" required /></label>
-        <label>Senha <input id="n-pass" type="password" autocomplete="new-password" required minlength="6" /></label>
-        <p class="erro" id="user-erro" role="alert"></p>
-        <button class="btn">Criar usuário</button>
-      </form>
-    </section>
+        <button class="btn" id="salvar" disabled>Salvar</button>
+      </header>
+      <div class="content" id="content"></div>
+    </div>
   </div>
 
   <script src="js/config.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="js/seed.js"></script>
   <script src="js/admin.js"></script>
 </body>
 </html>

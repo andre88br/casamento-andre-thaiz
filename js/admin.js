@@ -6,6 +6,7 @@
   const SK = "adm_token";
   let token = sessionStorage.getItem(SK) || "";
   let abas = [], versao = 0, atual = 0, sujo = false;
+  const clone = (o) => JSON.parse(JSON.stringify(o));
 
   /* ---------- API (com modo demonstração em localStorage) ---------- */
   async function api(acao, dados = {}) {
@@ -38,7 +39,7 @@
   async function iniciar() {
     if (token) {
       const r = await api("planilha");
-      if (r.ok) { return entrar(r); }
+      if (r.ok) return entrar(r);
       token = ""; sessionStorage.removeItem(SK);
     }
     const st = await api("status");
@@ -59,125 +60,175 @@
     try {
       const r = await api(primeiro ? "setup" : "login", { usuario: $("a-user").value, senha: $("a-pass").value });
       if (!r.ok) return ($("auth-erro").textContent = r.erro || "Erro.");
-      token = r.token; sessionStorage.setItem(SK, token); $("eu").textContent = r.usuario;
-      const p = await api("planilha");
-      entrar(p, r.usuario);
+      token = r.token; sessionStorage.setItem(SK, token);
+      entrar(await api("planilha"), r.usuario);
     } catch { $("auth-erro").textContent = "Falha de conexão."; }
     finally { $("auth-btn").disabled = false; }
   });
+  function migrar(a) { // formato antigo (grade) → seções
+    if (a.secoes) return a;
+    const l = a.linhas || [[""]];
+    return { nome: a.nome, icone: "📄", secoes: [{ titulo: a.nome, tipo: "cards", colunas: l[0].map((n) => ({ nome: n || "Campo", tipo: "texto" })), linhas: l.slice(1) }] };
+  }
   function entrar(p, usuario) {
     $("auth").hidden = true; $("app").hidden = false;
     if (usuario) $("eu").textContent = usuario;
-    abas = p.abas || []; versao = p.versao || 0; atual = 0; sujo = false;
-    render();
-    if (!usuario) api("usuarios").then((u) => u.ok && ($("eu").textContent = u.eu));
+    else api("usuarios").then((u) => u.ok && ($("eu").textContent = u.eu));
+    versao = p.versao || 0; atual = 0; sujo = false;
+    if (p.abas && p.abas.length) abas = p.abas.map(migrar);
+    else { abas = clone(window.SEED.abas); sujo = true; } // primeira vez: carrega o conteúdo da planilha
+    marcar(sujo); montar();
   }
   $("logout").onclick = async () => { await api("logout"); sessionStorage.removeItem(SK); location.reload(); };
+  $("burger").onclick = () => $("side").classList.toggle("open");
 
-  /* ---------- Abas superiores ---------- */
-  document.querySelectorAll(".top .tab").forEach((b) => (b.onclick = () => {
-    document.querySelectorAll(".top .tab").forEach((x) => x.classList.toggle("on", x === b));
-    $("tab-lista").hidden = b.dataset.tab !== "lista";
-    $("tab-usuarios").hidden = b.dataset.tab !== "usuarios";
-    if (b.dataset.tab === "usuarios") carregarUsuarios();
-  }));
-
-  /* ---------- Planilha ---------- */
-  const isBool = (v) => typeof v === "boolean" || v === "TRUE" || v === "FALSE";
-  const isLong = (v) => String(v).length > 70 || String(v).includes("\n");
-  const isUrl = (v) => /^https?:\/\//i.test(String(v).trim());
-
-  function valor(v) { // avalia =SUM(B2:B19)
-    const m = /^=SUM\(([A-Z])(\d+):([A-Z])(\d+)\)$/i.exec(String(v));
-    if (!m) return String(v);
-    const col = m[1].toUpperCase().charCodeAt(0) - 65, a = +m[2], b = +m[4];
-    const L = abas[atual].linhas; let t = 0;
-    for (let i = a - 1; i < b && i < L.length; i++) t += parseFloat(String(L[i][col] ?? "").replace(",", ".")) || 0;
-    return String(t);
+  /* ---------- Menu ---------- */
+  function montar() {
+    const nav = $("menu"); nav.innerHTML = "";
+    abas.forEach((a, i) => {
+      const b = document.createElement("button");
+      b.className = "item" + (i === atual ? " on" : "");
+      b.innerHTML = `<i>${a.icone || "📄"}</i>`; b.append(a.nome);
+      b.onclick = () => { atual = i; montar(); };
+      nav.appendChild(b);
+    });
+    $("m-usuarios").classList.toggle("on", atual === "usuarios");
+    $("side").classList.remove("open");
+    if (atual === "usuarios") { $("titulo").textContent = "Usuários"; return telaUsuarios(); }
+    const a = abas[atual]; $("titulo").textContent = `${a.icone || ""} ${a.nome}`;
+    const c = $("content"); c.innerHTML = "";
+    a.secoes.forEach((s) => c.appendChild(secao(s, a.secoes.length > 1)));
   }
+  $("m-usuarios").onclick = () => { atual = "usuarios"; montar(); };
+
   function marcar(s = true) { sujo = s; $("salvar").disabled = !s; $("status").textContent = s ? "Alterações não salvas" : ""; }
   window.addEventListener("beforeunload", (e) => { if (sujo) { e.preventDefault(); e.returnValue = ""; } });
 
-  function render() {
-    if (atual >= abas.length) atual = Math.max(0, abas.length - 1);
-    const bar = $("abas"); bar.innerHTML = "";
-    abas.forEach((a, i) => {
-      const b = document.createElement("button");
-      b.className = "tab" + (i === atual ? " on" : ""); b.textContent = a.nome;
-      b.onclick = () => { atual = i; $("f-busca").value = ""; render(); };
-      bar.appendChild(b);
-    });
-    const n = document.createElement("button");
-    n.className = "tab"; n.textContent = "+ Nova aba";
-    n.onclick = () => { const nome = prompt("Nome da nova aba:"); if (nome) { abas.push({ nome: nome.trim(), linhas: [["Item", "Valor"]] }); atual = abas.length - 1; marcar(); render(); } };
-    bar.appendChild(n);
-    grade(); stats();
+  /* ---------- Componentes ---------- */
+  const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); kids.forEach((k) => e.append(k)); return e; };
+  const num = (v) => (typeof v === "number" ? v : parseFloat(String(v).replace(/\./g, "").replace(",", ".")));
+  const brl = (n) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const isUrl = (v) => /^https?:\/\//i.test(String(v).trim());
+
+  function campo(col, linha, i, opts = {}) {
+    let inp;
+    const set = (v) => { linha[i] = v; marcar(); };
+    if (col.tipo === "check") {
+      inp = el("input", { type: "checkbox", checked: !!linha[i] }); inp.onchange = () => set(inp.checked);
+      return opts.compacto ? inp : el("label", { className: "chk" }, inp, col.nome);
+    }
+    if (col.tipo === "opcoes") {
+      inp = el("select"); const ops = ["", ...col.opcoes]; if (linha[i] && !ops.includes(linha[i])) ops.push(linha[i]);
+      ops.forEach((o) => inp.append(el("option", { value: o, textContent: o || "—" }))); inp.value = linha[i] ?? "";
+      inp.onchange = () => { set(inp.value); opts.onchange && opts.onchange(); };
+    } else if (col.tipo === "longo") {
+      inp = el("textarea", { value: linha[i] ?? "", rows: Math.min(8, Math.max(2, Math.ceil(String(linha[i] ?? "").length / 45))) });
+      inp.oninput = () => set(inp.value);
+    } else {
+      inp = el("input", { value: linha[i] ?? "", placeholder: opts.placeholder || "" });
+      if (col.tipo === "numero") { inp.inputMode = "decimal"; inp.oninput = () => { const n = num(inp.value); set(inp.value.trim() !== "" && !isNaN(n) && /^[\d.,\s]+$/.test(inp.value) ? n : inp.value); opts.onchange && opts.onchange(); }; }
+      else inp.oninput = () => set(inp.value);
+    }
+    if (opts.compacto) return inp;
+    const wrap = el("label", { className: "campo" }, col.nome, inp);
+    if (isUrl(linha[i])) wrap.append(el("a", { className: "lk", href: String(linha[i]).trim(), target: "_blank", rel: "noopener", textContent: "abrir link ↗" }));
+    return wrap;
+  }
+  const novaLinha = (s) => s.colunas.map((c) => (c.tipo === "check" ? false : c.tipo === "opcoes" ? c.opcoes[0] : ""));
+
+  function secao(s, comTitulo) {
+    const box = el("section", { className: "sec" });
+    const busca = el("input", { type: "search", placeholder: "Buscar…" });
+    const lista = el("div");
+    const soma = el("div", { className: "soma" });
+    const stats = el("div", { className: "stats" });
+    const filtros = el("div", { className: "filtros" });
+    const sel = {};
+    const add = el("button", { className: "btn", textContent: "+ Adicionar" });
+    const head = el("div", { className: "sec__head" }, el("h2", { textContent: comTitulo || s.guests ? s.titulo : "" }));
+    if (s.linhas.length > 5 || s.guests) head.append(busca);
+    head.append(add); box.append(head);
+    if (s.guests) {
+      s.colunas.forEach((c, i) => { if (c.tipo === "opcoes") { const x = el("select", { onchange: desenha }); x.append(el("option", { value: "", textContent: c.nome })); c.opcoes.forEach((o) => x.append(el("option", { value: o, textContent: o }))); sel[i] = x; filtros.append(x); } });
+      box.append(stats, filtros);
+    }
+    box.append(lista, soma);
+
+    function atualizaSoma() {
+      if (!s.soma) return;
+      const i = s.colunas.findIndex((c) => c.tipo === "numero");
+      soma.textContent = "Total: " + brl(s.linhas.reduce((t, l) => t + (num(l[i]) || 0), 0));
+    }
+    function atualizaStats() {
+      if (!s.guests) return;
+      const idx = (n) => s.colunas.findIndex((c) => c.nome === n);
+      const R = s.linhas.filter((l) => String(l[0]).trim());
+      const n = (nome, v) => R.filter((l) => l[idx(nome)] === v).length;
+      stats.innerHTML = "";
+      [["Total", R.length], ["Adultos", n("Tipo", "Adulto")], ["Crianças", n("Tipo", "Criança")], ["Noiva", n("De quem", "NOIVA")], ["Noivo", n("De quem", "NOIVO")], ["Confirmados", n("Confirmação", "Confirmado")], ["Pendentes", R.filter((l) => !l[idx("Confirmação")] || l[idx("Confirmação")] === "Pendente").length]]
+        .forEach(([k, v]) => stats.append(el("div", { className: "stat", innerHTML: `<b>${v}</b><span>${k}</span>` })));
+    }
+    function visivel(l) {
+      const q = busca.value.trim().toLowerCase();
+      if (q && !l.some((v) => String(v).toLowerCase().includes(q))) return false;
+      return Object.entries(sel).every(([i, x]) => !x.value || l[i] === x.value);
+    }
+    function desenha() {
+      lista.innerHTML = ""; atualizaSoma(); atualizaStats();
+      const itens = s.linhas.map((l, r) => [l, r]).filter(([l]) => visivel(l));
+      if (!itens.length) { lista.append(el("div", { className: "vazio", textContent: s.linhas.length ? "Nada encontrado." : "Nada por aqui ainda. Use “+ Adicionar”." })); if (s.guests && !s.linhas.length) lista.append(importarConvidados(s, desenha)); return; }
+      if (s.tipo === "tabela") {
+        const t = el("table"); const tr = t.createTHead().insertRow();
+        s.colunas.forEach((c) => tr.append(el("th", { textContent: c.nome }))); tr.append(el("th"));
+        const tb = t.createTBody();
+        itens.forEach(([l, r]) => {
+          const row = tb.insertRow();
+          s.colunas.forEach((c, i) => row.insertCell().append(campo(c, l, i, { compacto: true, placeholder: c.nome, onchange: atualizaStats })));
+          row.insertCell().append(el("button", { className: "x", title: "Excluir", textContent: "🗑", onclick: () => { s.linhas.splice(r, 1); marcar(); desenha(); } }));
+          row.querySelector("input[type=text],input:not([type])")?.addEventListener("input", atualizaStats);
+        });
+        lista.append(el("div", { className: "tabela" }, t));
+      } else {
+        const g = el("div", { className: "cards" });
+        itens.forEach(([l, r]) => {
+          const card = el("div", { className: "card rec" });
+          const ti = campo({ ...s.colunas[0], tipo: "texto" }, l, 0, { compacto: true, placeholder: s.colunas[0].nome }); ti.className = "titulo"; card.append(ti);
+          card.append(el("button", { className: "del", title: "Excluir", textContent: "🗑", onclick: () => { if (confirm("Excluir este item?")) { s.linhas.splice(r, 1); marcar(); desenha(); } } }));
+          const cp = el("div", { className: "campos" });
+          s.colunas.forEach((c, i) => { if (i) cp.append(campo(c, l, i, { onchange: atualizaSoma })); });
+          card.append(cp); g.append(card);
+        });
+        lista.append(g);
+      }
+    }
+    busca.oninput = desenha;
+    add.onclick = () => { s.linhas.push(novaLinha(s)); marcar(); Object.values(sel).forEach((x) => (x.value = "")); busca.value = ""; desenha(); const alvo = s.tipo === "tabela" ? lista.querySelector("tbody tr:last-child input") : lista.querySelector(".card:last-child .titulo"); alvo && alvo.focus(); };
+    desenha();
+    return box;
   }
 
-  function grade() {
-    const t = $("grade"); t.innerHTML = "";
-    const a = abas[atual]; if (!a) return;
-    if (!a.linhas.length) a.linhas.push([""]);
-    const q = $("f-busca").value.trim().toLowerCase();
-    const ncol = Math.max(...a.linhas.map((l) => l.length), 1);
-    a.linhas.forEach((l) => { while (l.length < ncol) l.push(""); });
-    const thead = t.createTHead().insertRow();
-    a.linhas[0].forEach((h, c) => {
-      const th = document.createElement("th");
-      const w = document.createElement("div"); w.className = "cell";
-      const inp = document.createElement("input"); inp.value = h;
-      inp.oninput = () => { a.linhas[0][c] = inp.value; marcar(); };
-      const x = document.createElement("button"); x.className = "x"; x.title = "Excluir coluna"; x.textContent = "×";
-      x.onclick = () => { if (confirm("Excluir esta coluna?")) { a.linhas.forEach((l) => l.splice(c, 1)); marcar(); render(); } };
-      w.append(inp, x); th.appendChild(w); thead.appendChild(th);
-    });
-    thead.appendChild(document.createElement("th"));
-    const tb = t.createTBody();
-    a.linhas.forEach((l, r) => {
-      if (r === 0) return;
-      if (q && !l.some((v) => String(v).toLowerCase().includes(q))) return;
-      const tr = tb.insertRow();
-      l.forEach((v, c) => {
-        const td = tr.insertCell(); const w = document.createElement("div"); w.className = "cell";
-        let el;
-        if (isBool(v)) {
-          el = document.createElement("input"); el.type = "checkbox"; el.checked = v === true || v === "TRUE";
-          el.onchange = () => { l[c] = el.checked; marcar(); };
-        } else {
-          el = document.createElement(isLong(v) ? "textarea" : "input");
-          el.value = String(v).startsWith("=") ? valor(v) : String(v);
-          if (el.tagName === "TEXTAREA") el.rows = Math.min(8, Math.ceil(String(v).length / 40) + String(v).split("\n").length - 1);
-          if (String(v).startsWith("=")) { el.onfocus = () => (el.value = l[c]); el.onblur = () => (el.value = valor(l[c])); }
-          el.oninput = () => { l[c] = el.value; marcar(); };
-        }
-        w.appendChild(el);
-        if (isUrl(v)) { const lk = document.createElement("a"); lk.className = "lk"; lk.href = String(v).trim(); lk.target = "_blank"; lk.rel = "noopener"; lk.textContent = "↗"; w.appendChild(lk); }
-        td.appendChild(w);
+  // Importa só a lista de convidados do .xlsx (os nomes ficam apenas no seu navegador/planilha, nunca no repositório)
+  function importarConvidados(s, desenha) {
+    const inp = el("input", { type: "file", accept: ".xlsx,.xls", hidden: true });
+    inp.onchange = async () => {
+      const f = inp.files[0]; if (!f) return;
+      const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
+      const nome = wb.SheetNames.find((n) => /convidad/i.test(n)); if (!nome) return alert("Não encontrei a aba “Lista de convidados” no arquivo.");
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[nome], { header: 1, defval: "" });
+      const h = rows[0].map((x) => String(x).trim().toLowerCase());
+      const ix = (re) => h.findIndex((x) => re.test(x));
+      const [iN, iT, iC, iQ, iF] = [ix(/convidad|nome/), ix(/tipo/), ix(/categoria/), ix(/de quem/), ix(/confirma/)];
+      const cap = (v, ops) => ops.find((o) => o.toLowerCase() === String(v).trim().toLowerCase()) || "";
+      const out = rows.slice(1).filter((r) => String(r[iN] ?? "").trim()).map((r) => {
+        const conf = String(iF >= 0 ? r[iF] : "").trim().toLowerCase();
+        return [String(r[iN]).trim(), cap(iT >= 0 ? r[iT] : "", s.colunas[1].opcoes), cap(iC >= 0 ? r[iC] : "", s.colunas[2].opcoes), cap(iQ >= 0 ? r[iQ] : "", s.colunas[3].opcoes), /^(sim|confirm)/.test(conf) ? "Confirmado" : /^(n[aã]o|recus)/.test(conf) ? "Recusou" : "Pendente"];
       });
-      const td = tr.insertCell(); const x = document.createElement("button"); x.className = "x"; x.title = "Excluir linha"; x.textContent = "🗑";
-      x.onclick = () => { a.linhas.splice(r, 1); marcar(); render(); };
-      td.appendChild(x);
-    });
-  }
-  $("f-busca").oninput = grade;
-  $("add-linha").onclick = () => { const a = abas[atual]; if (!a) return; a.linhas.push(new Array(a.linhas[0].length).fill("")); marcar(); $("f-busca").value = ""; grade(); const ins = $("grade").querySelectorAll("tbody tr:last-child input,tbody tr:last-child textarea")[0]; ins && ins.focus(); };
-  $("add-col").onclick = () => { const a = abas[atual]; if (!a) return; const nome = prompt("Nome da nova coluna:"); if (nome === null) return; a.linhas.forEach((l, i) => l.push(i === 0 ? nome : "")); marcar(); render(); };
-  $("ren-aba").onclick = () => { const a = abas[atual]; const n = a && prompt("Novo nome:", a.nome); if (n) { a.nome = n.trim(); marcar(); render(); } };
-  $("del-aba").onclick = () => { const a = abas[atual]; if (a && confirm(`Excluir a aba "${a.nome}" e todo o conteúdo?`)) { abas.splice(atual, 1); marcar(); render(); } };
-
-  function stats() {
-    const box = $("stats"); box.innerHTML = "";
-    const a = abas[atual]; if (!a || !/convidad/i.test(a.nome)) return;
-    const h = a.linhas[0].map((x) => String(x).toLowerCase());
-    const col = (re) => h.findIndex((x) => re.test(x));
-    const iT = col(/tipo/), iQ = col(/de quem/), iN = col(/convidad|nome/), iC = col(/confirma/);
-    const rows = a.linhas.slice(1).filter((l) => String(l[iN] ?? "").trim());
-    const cnt = (f) => rows.filter(f).length;
-    const eq = (i, v) => (l) => String(l[i] ?? "").trim().toLowerCase() === v;
-    [["Total", rows.length], ["Adultos", cnt(eq(iT, "adulto"))], ["Crianças", cnt(eq(iT, "criança"))], ["Noiva", cnt(eq(iQ, "noiva"))], ["Noivo", cnt(eq(iQ, "noivo"))], ["Confirmados", cnt((l) => /^(sim|confirmad)/i.test(String(l[iC] ?? "").trim()))]]
-      .forEach(([k, v]) => { const d = document.createElement("div"); d.className = "stat"; d.innerHTML = `<b>${v}</b><span>${k}</span>`; box.appendChild(d); });
+      s.linhas.push(...out); marcar(); montar();
+    };
+    return el("p", { style: "text-align:center" }, el("button", { className: "btn btn--ghost", textContent: "Importar convidados do .xlsx", onclick: () => inp.click() }), inp);
   }
 
+  /* ---------- Salvar / exportar ---------- */
   $("salvar").onclick = async () => {
     $("salvar").disabled = true; $("status").textContent = "Salvando…";
     try {
@@ -186,67 +237,37 @@
       else { $("status").textContent = r.erro || "Erro ao salvar."; $("salvar").disabled = false; if (r.expirou) location.reload(); }
     } catch { $("status").textContent = "Falha de conexão."; $("salvar").disabled = false; }
   };
-
-  /* ---------- Importar / exportar .xlsx ---------- */
-  $("imp").onchange = async (e) => {
-    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-    if (!confirm("Importar substitui TODAS as abas atuais pelo conteúdo do arquivo. Continuar?")) return;
-    const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
-    abas = wb.SheetNames.map((nome) => {
-      const ws = wb.Sheets[nome]; if (!ws["!ref"]) return { nome: nome.trim(), linhas: [[""]] };
-      const rg = XLSX.utils.decode_range(ws["!ref"]); const linhas = [];
-      for (let r = rg.s.r; r <= rg.e.r; r++) {
-        const l = [];
-        for (let c = rg.s.c; c <= rg.e.c; c++) {
-          const cell = ws[XLSX.utils.encode_cell({ r, c })]; let v = "";
-          if (cell) {
-            if (cell.f) v = /SUM/i.test(cell.f) ? `=SUM(${String.fromCharCode(65 + c)}2:${String.fromCharCode(65 + c)}${r})` : cell.v ?? "";
-            else v = cell.t === "b" ? !!cell.v : cell.v ?? "";
-            if (typeof v === "string") v = v.trim();
-          }
-          l.push(v);
-        }
-        linhas.push(l);
-      }
-      while (linhas.length > 1 && linhas[linhas.length - 1].every((v) => v === "")) linhas.pop();
-      let nc = linhas.reduce((m, l) => { let k = l.length; while (k > 0 && l[k - 1] === "") k--; return Math.max(m, k); }, 0) || 1;
-      linhas.forEach((l) => (l.length = nc));
-      linhas.forEach((l) => { for (let i = 0; i < nc; i++) if (l[i] === undefined) l[i] = ""; });
-      return { nome: nome.trim(), linhas: linhas.filter((l, i) => i === 0 || l.some((v) => v !== "")) };
-    });
-    atual = 0; marcar(); render();
-  };
   $("exp").onclick = () => {
     const wb = XLSX.utils.book_new();
     abas.forEach((a) => {
-      const dados = a.linhas.map((l) => l.map((v) => (typeof v === "string" && v.startsWith("=") ? Number(valor(v)) : typeof v === "string" && v !== "" && !isNaN(v) && !/^0\d/.test(v) ? Number(v) : v)));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dados), a.nome.slice(0, 31) || "Aba");
+      const aoa = [];
+      a.secoes.forEach((s) => { aoa.push([s.titulo], s.colunas.map((c) => c.nome), ...s.linhas.map((l) => l.map((v) => (v === "" ? null : v))), []); });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), a.nome.slice(0, 31));
     });
     XLSX.writeFile(wb, "Casamento.xlsx");
   };
 
   /* ---------- Usuários ---------- */
-  async function carregarUsuarios() {
+  async function telaUsuarios() {
+    const c = $("content"); c.innerHTML = "";
+    const ul = el("ul", { className: "users" });
+    const erro = el("p", { className: "erro" });
+    const u = el("input", { autocomplete: "off", required: true }), p = el("input", { type: "password", autocomplete: "new-password", required: true, minLength: 6 });
+    const form = el("form", { className: "card novo-form" }, el("h3", { textContent: "Criar novo usuário" }), el("label", {}, "Usuário", u), el("label", {}, "Senha (mín. 6 caracteres)", p), erro, el("button", { className: "btn", textContent: "Criar usuário" }));
+    form.onsubmit = async (e) => {
+      e.preventDefault(); erro.textContent = "";
+      const r = await api("criarUsuario", { novoUsuario: u.value, novaSenha: p.value });
+      if (!r.ok) return (erro.textContent = r.erro || "Erro.");
+      telaUsuarios();
+    };
+    c.append(el("div", {}, el("h2", { textContent: "Quem tem acesso" }), ul), form);
     const r = await api("usuarios"); if (!r.ok) return;
-    const ul = $("users"); ul.innerHTML = "";
-    r.usuarios.forEach((u) => {
-      const li = document.createElement("li");
-      const s = document.createElement("span"); s.textContent = u.usuario + (u.usuario === r.eu ? " (você)" : "");
-      li.appendChild(s);
-      if (u.usuario !== r.eu) {
-        const b = document.createElement("button"); b.className = "btn btn--ghost"; b.textContent = "Excluir";
-        b.onclick = async () => { if (confirm(`Remover o acesso de "${u.usuario}"?`)) { await api("excluirUsuario", { alvo: u.usuario }); carregarUsuarios(); } };
-        li.appendChild(b);
-      }
-      ul.appendChild(li);
+    r.usuarios.forEach((x) => {
+      const li = el("li", {}, el("span", { textContent: x.usuario + (x.usuario === r.eu ? " (você)" : "") }));
+      if (x.usuario !== r.eu) li.append(el("button", { className: "btn btn--ghost", textContent: "Excluir", onclick: async () => { if (confirm(`Remover o acesso de "${x.usuario}"?`)) { await api("excluirUsuario", { alvo: x.usuario }); telaUsuarios(); } } }));
+      ul.append(li);
     });
   }
-  $("user-form").addEventListener("submit", async (e) => {
-    e.preventDefault(); $("user-erro").textContent = "";
-    const r = await api("criarUsuario", { novoUsuario: $("n-user").value, novaSenha: $("n-pass").value });
-    if (!r.ok) return ($("user-erro").textContent = r.erro || "Erro.");
-    $("n-user").value = $("n-pass").value = ""; carregarUsuarios();
-  });
 
   iniciar();
 })();
