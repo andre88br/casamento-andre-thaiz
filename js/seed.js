@@ -6,12 +6,18 @@ window.SEED = {
    "icone": "💰",
    "secoes": [
     {
-     "titulo": "Custos",
+     "titulo": "Resumo por menu",
+     "tipo": "resumo",
+     "colunas": [],
+     "linhas": []
+    },
+    {
+     "titulo": "Outros custos",
      "tipo": "cards",
      "soma": true,
      "colunas": [
       {
-       "nome": "Categoria",
+       "nome": "Descrição",
        "tipo": "texto"
       },
       {
@@ -19,16 +25,7 @@ window.SEED = {
        "tipo": "numero"
       }
      ],
-     "linhas": [
-      [
-       "Igreja",
-       1600
-      ],
-      [
-       "Cartório",
-       690
-      ]
-     ]
+     "linhas": []
     }
    ]
   },
@@ -107,6 +104,27 @@ window.SEED = {
        ""
       ]
      ]
+    },
+    {
+     "titulo": "Valores",
+     "tipo": "cards",
+     "soma": true,
+     "colunas": [
+      {
+       "nome": "Descrição",
+       "tipo": "texto"
+      },
+      {
+       "nome": "Valor",
+       "tipo": "numero"
+      }
+     ],
+     "linhas": [
+      [
+       "Igreja (1 salário mínimo)",
+       1600
+      ]
+     ]
     }
    ]
   },
@@ -147,6 +165,27 @@ window.SEED = {
       [
        "Valor dentro do Cartório",
        "R$ 617,08 + R$ 13,91  por folhas arquivadas"
+      ]
+     ]
+    },
+    {
+     "titulo": "Valores",
+     "tipo": "cards",
+     "soma": true,
+     "colunas": [
+      {
+       "nome": "Descrição",
+       "tipo": "texto"
+      },
+      {
+       "nome": "Valor",
+       "tipo": "numero"
+      }
+     ],
+     "linhas": [
+      [
+       "Taxas do cartório",
+       690
       ]
      ]
     }
@@ -415,6 +454,22 @@ window.SEED = {
        ""
       ]
      ]
+    },
+    {
+     "titulo": "Valores",
+     "tipo": "cards",
+     "soma": true,
+     "colunas": [
+      {
+       "nome": "Descrição",
+       "tipo": "texto"
+      },
+      {
+       "nome": "Valor",
+       "tipo": "numero"
+      }
+     ],
+     "linhas": []
     }
    ]
   },
@@ -469,6 +524,22 @@ window.SEED = {
        ""
       ]
      ]
+    },
+    {
+     "titulo": "Valores",
+     "tipo": "cards",
+     "soma": true,
+     "colunas": [
+      {
+       "nome": "Descrição",
+       "tipo": "texto"
+      },
+      {
+       "nome": "Valor",
+       "tipo": "numero"
+      }
+     ],
+     "linhas": []
     }
    ]
   },
@@ -493,6 +564,10 @@ window.SEED = {
        "tipo": "numero"
       },
       {
+       "nome": "Valor por pessoa",
+       "tipo": "numero"
+      },
+      {
        "nome": "Diferenciais",
        "tipo": "longo"
       }
@@ -502,11 +577,13 @@ window.SEED = {
        "STILLUS | Buffet e Decoração",
        "https://www.instagram.com/stillusbuffetedecoracao/",
        "",
+       "",
        ""
       ],
       [
        "BUFFET MARLY FESTAS",
        "https://www.instagram.com/marlyfestasbuffet/",
+       "",
        "",
        ""
       ],
@@ -514,15 +591,34 @@ window.SEED = {
        "Buffet Emiliana Moraes",
        "https://www.instagram.com/buffetemilianamoraes/",
        "",
+       "",
        ""
       ],
       [
        "Bárbaros Buffet",
        "https://www.instagram.com/barbarosbuffet/",
        "",
+       "",
        ""
       ]
-     ]
+     ],
+     "porPessoa": true
+    },
+    {
+     "titulo": "Valores",
+     "tipo": "cards",
+     "soma": true,
+     "colunas": [
+      {
+       "nome": "Descrição",
+       "tipo": "texto"
+      },
+      {
+       "nome": "Valor",
+       "tipo": "numero"
+      }
+     ],
+     "linhas": []
     }
    ]
   },
@@ -565,6 +661,22 @@ window.SEED = {
        ""
       ]
      ]
+    },
+    {
+     "titulo": "Valores",
+     "tipo": "cards",
+     "soma": true,
+     "colunas": [
+      {
+       "nome": "Descrição",
+       "tipo": "texto"
+      },
+      {
+       "nome": "Valor",
+       "tipo": "numero"
+      }
+     ],
+     "linhas": []
     }
    ]
   },
@@ -573,11 +685,12 @@ window.SEED = {
    "icone": "👰",
    "secoes": [
     {
-     "titulo": "Itens",
+     "titulo": "Valores",
      "tipo": "cards",
+     "soma": true,
      "colunas": [
       {
-       "nome": "Item",
+       "nome": "Descrição",
        "tipo": "texto"
       },
       {
@@ -594,11 +707,12 @@ window.SEED = {
    "icone": "🤵",
    "secoes": [
     {
-     "titulo": "Itens",
+     "titulo": "Valores",
      "tipo": "cards",
+     "soma": true,
      "colunas": [
       {
-       "nome": "Item",
+       "nome": "Descrição",
        "tipo": "texto"
       },
       {
