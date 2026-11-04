@@ -34,3 +34,11 @@ Para moderar recados antes de aparecerem, troque `"SIM"` por `""` no `doPost` e 
 ## Publicar (grátis)
 - **Netlify**: arraste a pasta em https://app.netlify.com/drop
 - **GitHub Pages**: suba o repositório e ative Pages em *Settings → Pages*.
+
+## Área restrita (`/admin.html`)
+Planilha do casamento (todas as abas) editável online, com login.
+1. Cole o `apps-script/Code.gs` atualizado no Apps Script e **reimplante** (Nova versão) — a URL deve estar em `googleScriptUrl`.
+2. Abra `admin.html`: no **primeiro acesso** crie o usuário/senha administrador.
+3. Aba **Usuários**: crie outros acessos. Aba **Planilha**: edite, **Salvar**, ou **Importar .xlsx** (substitui tudo) / **Exportar .xlsx**.
+
+Os dados ficam só na sua planilha Google (não no repositório). Senhas são guardadas com hash + salt. Sem `googleScriptUrl` a página roda em modo demonstração (localStorage, sem segurança real).
