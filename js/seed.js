@@ -645,11 +645,16 @@ window.SEED = {
       {
        "nome": "Valor",
        "tipo": "numero"
+      },
+      {
+       "nome": "Valor por pessoa",
+       "tipo": "numero"
       }
      ],
      "linhas": [
       [
        "Sr. Custela",
+       "",
        "",
        "",
        ""
@@ -658,9 +663,11 @@ window.SEED = {
        "Choperia Eventos",
        "",
        "https://www.instagram.com/chopperia_eventos/",
+       "",
        ""
       ]
-     ]
+     ],
+     "porPessoa": true
     },
     {
      "titulo": "Valores",
@@ -777,6 +784,18 @@ window.SEED = {
         "Pendente",
         "Confirmado",
         "Recusou"
+       ]
+      },
+      {
+       "nome": "Chance de comparecimento",
+       "tipo": "percentual"
+      },
+      {
+       "nome": "Bebe?",
+       "tipo": "opcoes",
+       "opcoes": [
+        "Sim",
+        "Não"
        ]
       }
      ],
