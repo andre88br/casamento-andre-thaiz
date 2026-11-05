@@ -70,12 +70,37 @@
     const l = a.linhas || [[""]];
     return { nome: a.nome, icone: "📄", secoes: [{ titulo: a.nome, tipo: "cards", colunas: l[0].map((n) => ({ nome: n || "Campo", tipo: "texto" })), linhas: l.slice(1) }] };
   }
+  // Atualiza dados já salvos para a estrutura atual (colunas/seções novas), preservando o conteúdo.
+  function sincronizar() {
+    let mudou = false;
+    const tot = abas.find((a) => a.nome === "Total");
+    const cus = tot && tot.secoes.find((x) => x.titulo === "Custos");
+    if (cus) { cus.titulo = "Outros custos"; mudou = true; }
+    ["Noiva", "Noivo"].forEach((n) => { const sc = abas.find((a) => a.nome === n)?.secoes.find((x) => x.titulo === "Itens"); if (sc) { sc.titulo = "Valores"; sc.soma = true; sc.colunas[0].nome = "Descrição"; mudou = true; } });
+    window.SEED.abas.forEach((seedAba) => {
+      let aba = abas.find((a) => a.nome === seedAba.nome);
+      if (!aba) { const nova = clone(seedAba); nova.secoes.forEach((x) => x.titulo === "Valores" && (x.linhas = [])); abas.push(nova); return (mudou = true); }
+      if (tot && seedAba.nome === "Total") { // garante o resumo no topo
+        if (!aba.secoes.some((x) => x.tipo === "resumo")) { aba.secoes.unshift(clone(seedAba.secoes[0])); mudou = true; }
+      }
+      seedAba.secoes.forEach((ss) => {
+        const sec = aba.secoes.find((x) => x.titulo === ss.titulo);
+        if (!sec) { const nova = clone(ss); if (nova.titulo === "Valores") nova.linhas = []; aba.secoes.push(nova); return (mudou = true); }
+        ["porPessoa", "soma", "guests"].forEach((k) => { if (ss[k] && !sec[k]) { sec[k] = ss[k]; mudou = true; } });
+        if (ss.colunas.every((c, i) => sec.colunas[i] && sec.colunas[i].nome === c.nome) && ss.colunas.length === sec.colunas.length) return;
+        const antigos = sec.colunas.map((c) => c.nome);
+        sec.linhas = sec.linhas.map((l) => ss.colunas.map((c) => { const j = antigos.indexOf(c.nome); return j >= 0 ? l[j] : c.tipo === "check" ? false : ""; }));
+        sec.colunas = clone(ss.colunas); mudou = true;
+      });
+    });
+    return mudou;
+  }
   function entrar(p, usuario) {
     $("auth").hidden = true; $("app").hidden = false;
     if (usuario) $("eu").textContent = usuario;
     else api("usuarios").then((u) => u.ok && ($("eu").textContent = u.eu));
     versao = p.versao || 0; atual = 0; sujo = false;
-    if (p.abas && p.abas.length) abas = p.abas.map(migrar);
+    if (p.abas && p.abas.length) { abas = p.abas.map(migrar); if (sincronizar()) sujo = true; }
     else { abas = clone(window.SEED.abas); sujo = true; } // primeira vez: carrega o conteúdo da planilha
     marcar(sujo); montar();
   }
@@ -101,7 +126,7 @@
   }
   $("m-usuarios").onclick = () => { atual = "usuarios"; montar(); };
 
-  function marcar(s = true) { sujo = s; $("salvar").disabled = !s; $("status").textContent = s ? "Alterações não salvas" : ""; }
+  function marcar(s = true) { sujo = s; window.dispatchEvent(new Event("mudou")); $("salvar").disabled = !s; $("status").textContent = s ? "Alterações não salvas" : ""; }
   window.addEventListener("beforeunload", (e) => { if (sujo) { e.preventDefault(); e.returnValue = ""; } });
 
   /* ---------- Componentes ---------- */
@@ -126,6 +151,8 @@
       inp.oninput = () => set(inp.value);
     } else {
       inp = el("input", { value: linha[i] ?? "", placeholder: opts.placeholder || "" });
+      if (col.tipo === "telefone") { inp.type = "tel"; inp.autocomplete = "off"; inp.placeholder = opts.placeholder || "(34) 99999-9999"; }
+      if (col.tipo === "email") { inp.type = "email"; inp.autocomplete = "off"; inp.placeholder = opts.placeholder || "nome@email.com"; }
       if (col.tipo === "numero") { inp.inputMode = "decimal"; inp.oninput = () => { const n = num(inp.value); set(inp.value.trim() !== "" && !isNaN(n) && /^[\d.,\s]+$/.test(inp.value) ? n : inp.value); opts.onchange && opts.onchange(); }; }
       else inp.oninput = () => set(inp.value);
     }
@@ -136,7 +163,38 @@
   }
   const novaLinha = (s) => s.colunas.map((c) => (c.tipo === "check" ? false : c.tipo === "opcoes" ? c.opcoes[0] : ""));
 
+  const convidados = () => {
+    const g = abas.flatMap((a) => a.secoes).find((x) => x.guests);
+    return g ? g.linhas.filter((l) => String(l[0]).trim()).length : 0;
+  };
+  function somaSecao(s) {
+    const i = s.colunas.findIndex((c) => c.tipo === "numero");
+    return s.linhas.reduce((t, l) => t + (num(l[i]) || 0), 0);
+  }
+  function resumo(s) {
+    const box = el("section", { className: "sec" }, el("div", { className: "sec__head" }, el("h2", { textContent: s.titulo })));
+    const corpo = el("div", { className: "tabela" }); box.append(corpo);
+    const desenha = () => {
+      if (!box.isConnected && box.dataset.ok) return window.removeEventListener("mudou", desenha);
+      box.dataset.ok = 1;
+      let total = 0; const t = el("table", { style: "min-width:0" });
+      const add = (nome, v, ir) => { total += v; const r = t.insertRow(); r.insertCell().append(ir ? el("button", { className: "btn btn--ghost", textContent: nome, onclick: ir }) : nome); r.insertCell().append(el("b", { textContent: brl(v) })); r.cells[1].style.textAlign = "right"; };
+      abas.forEach((a, idx) => {
+        if (a.nome === "Total") return;
+        const v = a.secoes.filter((x) => x.titulo === "Valores").reduce((t2, x) => t2 + somaSecao(x), 0);
+        if (a.secoes.some((x) => x.titulo === "Valores")) add(`${a.icone || ""} ${a.nome}`, v, () => { atual = idx; montar(); });
+      });
+      const outros = abas.find((a) => a.nome === "Total")?.secoes.find((x) => x.titulo === "Outros custos");
+      if (outros) add("Outros custos", somaSecao(outros));
+      const r = t.insertRow(); r.insertCell().append(el("b", { textContent: "TOTAL" })); r.insertCell().append(el("b", { textContent: brl(total), style: "font-size:1.3rem" })); r.cells[1].style.textAlign = "right";
+      corpo.innerHTML = ""; corpo.append(t);
+    };
+    window.addEventListener("mudou", desenha); desenha();
+    return box;
+  }
+
   function secao(s, comTitulo) {
+    if (s.tipo === "resumo") return resumo(s);
     const box = el("section", { className: "sec" });
     const busca = el("input", { type: "search", placeholder: "Buscar…" });
     const lista = el("div");
@@ -195,7 +253,13 @@
           const ti = campo({ ...s.colunas[0], tipo: "texto" }, l, 0, { compacto: true, placeholder: s.colunas[0].nome }); ti.className = "titulo"; card.append(ti);
           card.append(el("button", { className: "del", title: "Excluir", textContent: "🗑", onclick: () => { if (confirm("Excluir este item?")) { s.linhas.splice(r, 1); marcar(); desenha(); } } }));
           const cp = el("div", { className: "campos" });
-          s.colunas.forEach((c, i) => { if (i) cp.append(campo(c, l, i, { onchange: atualizaSoma })); });
+          const est = el("p", { className: "hint" });
+          const refaz = () => {
+            const n = convidados(), v = num(l[s.colunas.findIndex((c) => c.nome === "Valor por pessoa")]);
+            est.textContent = n && v ? `Estimativa para ${n} convidados: ${brl(v * n)}` : "";
+          };
+          s.colunas.forEach((c, i) => { if (i) cp.append(campo(c, l, i, { onchange: () => { atualizaSoma(); refaz(); } })); });
+          if (s.porPessoa) { refaz(); cp.append(est); }
           card.append(cp); g.append(card);
         });
         lista.append(g);
@@ -219,9 +283,20 @@
       const ix = (re) => h.findIndex((x) => re.test(x));
       const [iN, iT, iC, iQ, iF] = [ix(/convidad|nome/), ix(/tipo/), ix(/categoria/), ix(/de quem/), ix(/confirma/)];
       const cap = (v, ops) => ops.find((o) => o.toLowerCase() === String(v).trim().toLowerCase()) || "";
+      const [iTel, iMail] = [ix(/telefone|celular|whats/), ix(/e-?mail/)];
+      const col = (n) => s.colunas.findIndex((c) => c.nome === n);
+      const opc = (n) => s.colunas[col(n)].opcoes;
       const out = rows.slice(1).filter((r) => String(r[iN] ?? "").trim()).map((r) => {
         const conf = String(iF >= 0 ? r[iF] : "").trim().toLowerCase();
-        return [String(r[iN]).trim(), cap(iT >= 0 ? r[iT] : "", s.colunas[1].opcoes), cap(iC >= 0 ? r[iC] : "", s.colunas[2].opcoes), cap(iQ >= 0 ? r[iQ] : "", s.colunas[3].opcoes), /^(sim|confirm)/.test(conf) ? "Confirmado" : /^(n[aã]o|recus)/.test(conf) ? "Recusou" : "Pendente"];
+        const l = s.colunas.map(() => "");
+        l[col("Convidado")] = String(r[iN]).trim();
+        l[col("Tipo")] = cap(iT >= 0 ? r[iT] : "", opc("Tipo"));
+        l[col("Categoria")] = cap(iC >= 0 ? r[iC] : "", opc("Categoria"));
+        l[col("De quem")] = cap(iQ >= 0 ? r[iQ] : "", opc("De quem"));
+        l[col("Confirmação")] = /^(sim|confirm)/.test(conf) ? "Confirmado" : /^(n[aã]o|recus)/.test(conf) ? "Recusou" : "Pendente";
+        if (iTel >= 0) l[col("Telefone")] = String(r[iTel]).trim();
+        if (iMail >= 0) l[col("E-mail")] = String(r[iMail]).trim();
+        return l;
       });
       s.linhas.push(...out); marcar(); montar();
     };
