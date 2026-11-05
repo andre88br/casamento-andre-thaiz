@@ -36,10 +36,11 @@ Para moderar recados antes de aparecerem, troque `"SIM"` por `""` no `doPost` e 
 - **GitHub Pages**: suba o repositório e ative Pages em *Settings → Pages*.
 
 ## Área restrita (`/admin.html`)
-Planejamento do casamento com login e um menu lateral por aba da planilha (Total, Igreja, Cartório, Espaço, Assessorias, Buffets, Fornecedores, Noiva, Noivo, Lista de convidados), já preenchido (`js/seed.js`).
+Planejamento do casamento com login e um menu lateral por aba da planilha (Total, Igreja, Cartório, Espaço, Assessorias, Buffets, Fornecedores, Noiva, Noivo, Lista de convidados, Quantidades), já preenchido (`js/seed.js`).
 1. Cole o `apps-script/Code.gs` atualizado no Apps Script e **reimplante** (Nova versão) — a URL deve estar em `googleScriptUrl`.
 2. Abra `admin.html`: no **primeiro acesso** crie o usuário/senha administrador.
 3. Em cada menu com opções (Igreja, Espaço, Assessorias, Buffets, Fornecedores) clique **Escolher esta opção**: só a escolhida vai para o **Total** (em Fornecedores, uma por categoria; valor por pessoa × convidados, com a base escolhida no Total).
-4. Menu **Usuários**: crie outros acessos. Edite os itens em cada menu e clique **Salvar**. Em **Lista de convidados** use *Importar convidados do .xlsx* (uma vez; os nomes não ficam no repositório). **Exportar .xlsx** gera a planilha.
+4. Menu **Quantidades**: calcula bebidas, comida, doces e descartáveis por pessoa (com base na Lista de convidados e na chance de comparecimento), com margem de segurança e quantas embalagens comprar. Itens editáveis e novos itens via *+ Adicionar item*.
+5. Menu **Usuários**: crie outros acessos. Edite os itens em cada menu e clique **Salvar**. Em **Lista de convidados** use *Importar convidados do .xlsx* (uma vez; os nomes não ficam no repositório). **Exportar .xlsx** gera a planilha.
 
 Os dados ficam só na sua planilha Google (não no repositório). Senhas são guardadas com hash + salt. Sem `googleScriptUrl` a página roda em modo demonstração (localStorage, sem segurança real).

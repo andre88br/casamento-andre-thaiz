@@ -177,14 +177,14 @@
       inp = el("textarea", { value: linha[i] ?? "", rows: Math.min(8, Math.max(2, Math.ceil(String(linha[i] ?? "").length / 45))) });
       inp.oninput = () => set(inp.value);
     } else {
-      inp = el("input", { value: linha[i] ?? "", placeholder: opts.placeholder || "" });
+      inp = el("input", { value: col.tipo === "numero" && typeof linha[i] === "number" ? String(linha[i]).replace(".", ",") : linha[i] ?? "", placeholder: opts.placeholder || "" });
       if (col.tipo === "telefone") { inp.type = "tel"; inp.autocomplete = "off"; inp.placeholder = opts.placeholder || "(34) 99999-9999"; }
       if (col.tipo === "email") { inp.type = "email"; inp.autocomplete = "off"; inp.placeholder = opts.placeholder || "nome@email.com"; }
       if (col.tipo === "percentual") {
         inp.type = "number"; inp.min = 0; inp.max = 100; inp.step = 5; inp.placeholder = opts.compacto ? "%" : "0 a 100 (%)";
         inp.oninput = () => { const n = parseFloat(inp.value); set(inp.value === "" || isNaN(n) ? "" : Math.min(100, Math.max(0, n))); opts.onchange && opts.onchange(); };
       } else if (col.tipo === "numero") { inp.inputMode = "decimal"; inp.oninput = () => { const n = num(inp.value); set(inp.value.trim() !== "" && !isNaN(n) && /^[\d.,\s]+$/.test(inp.value) ? n : inp.value); opts.onchange && opts.onchange(); }; }
-      else inp.oninput = () => set(inp.value);
+      else inp.oninput = () => { set(inp.value); opts.onchange && opts.onchange(); };
     }
     if (opts.compacto) return inp;
     const wrap = el("label", { className: "campo" }, col.nome, inp);
@@ -196,12 +196,15 @@
   // Convidados: todos, com 100% de chance e com 75% ou mais
   const convidados = (soBebem = false) => {
     const g = abas.flatMap((a) => a.secoes).find((x) => x.guests);
-    if (!g) return { todos: 0, c100: 0, c75: 0 };
+    if (!g) return { todos: 0, c100: 0, c75: 0, p75: 0, conf: 0, conta: 0 };
     const ic = g.colunas.findIndex((c) => c.nome === "Chance de comparecimento");
     const ib = g.colunas.findIndex((c) => c.nome === "Bebe?");
+    const ia = g.colunas.findIndex((c) => c.nome === "Confirmação");
     const R = g.linhas.filter((l) => String(l[0]).trim() && (!soBebem || l[ib] === "Sim"));
     const ch = (l) => { const n = num(l[ic]); return isNaN(n) ? -1 : n; };
-    return { todos: R.length, c100: R.filter((l) => ch(l) >= 100).length, c75: R.filter((l) => ch(l) >= 75).length };
+    const p75 = R.filter((l) => ch(l) >= 75 && l[ia] !== "Recusou").length, conf = R.filter((l) => l[ia] === "Confirmado").length;
+    // Para valores por pessoa: chance ≥75% (sem quem recusou) até os confirmados passarem disso; daí, cada confirmado a mais soma
+    return { todos: R.length, c100: R.filter((l) => ch(l) >= 100).length, c75: R.filter((l) => ch(l) >= 75).length, p75, conf, conta: Math.max(p75, conf) };
   };
   function somaSecao(s) {
     const i = s.colunas.findIndex((c) => c.tipo === "numero");
@@ -209,13 +212,12 @@
   }
   // Base de convidados usada no "valor por pessoa" que vai para o total (fica salva no resumo da aba Total)
   const BASES = [["todos", "Todos os convidados"], ["c100", "Chance 100%"], ["c75", "Chance 75% ou mais"]];
-  const cfgTotal = () => abas.find((a) => a.nome === "Total")?.secoes.find((x) => x.tipo === "resumo") || {};
   const col = (s, nome) => s.colunas.findIndex((c) => c.nome === nome);
   // Valor de uma opção: valor fixo + valor por pessoa × convidados (só os que bebem, se marcado)
   function valorLinha(s, l) {
     const ib = col(s, "Só quem bebe?"), vpp = num(l[col(s, "Valor por pessoa")]);
-    const fixo = num(l[col(s, "Valor")]) || 0;
-    return fixo + (vpp ? vpp * convidados(ib >= 0 && l[ib] === true)[cfgTotal().base || "todos"] : 0);
+    if (vpp && !isNaN(vpp)) return vpp * convidados(ib >= 0 && l[ib] === true).conta;
+    return num(l[col(s, "Valor")]) || 0;
   }
   const escolhidas = (s) => s.linhas.filter((l) => l[col(s, "Escolhido")] === true);
   // Total de um menu: opções escolhidas + extras marcados + listas de valores
@@ -230,13 +232,14 @@
     return { v, det, conta: temOpcoes || a.secoes.some((s) => s.soma && s.titulo === "Valores"), aviso: temOpcoes && !a.secoes.some((s) => s.escolha && escolhidas(s).length) };
   }
   function resumo(s) {
-    const base = el("select", { onchange: () => { s.base = base.value; marcar(); } });
-    BASES.forEach(([k, t]) => base.append(el("option", { value: k, textContent: t }))); base.value = s.base || "todos";
-    const box = el("section", { className: "sec" }, el("div", { className: "sec__head" }, el("h2", { textContent: s.titulo }), el("label", { className: "base" }, "Valores por pessoa calculados com", base)));
+    const regra = el("p", { className: "hint" });
+    const box = el("section", { className: "sec" }, el("div", { className: "sec__head" }, el("h2", { textContent: s.titulo })), regra);
     const corpo = el("div", { className: "tabela" }); box.append(corpo);
     const desenha = () => {
       if (!box.isConnected && box.dataset.ok) return window.removeEventListener("mudou", desenha);
       box.dataset.ok = 1;
+      const n = convidados();
+      regra.textContent = `Valores por pessoa calculados com ${n.conta} convidados — o maior entre chance ≥75% (${n.p75}) e confirmados (${n.conf}).`;
       let total = 0; const t = el("table", { style: "min-width:0" });
       const add = (nome, v, ir, det) => { total += v; const r = t.insertRow(); r.insertCell().append(ir ? el("button", { className: "btn btn--ghost", textContent: nome, onclick: ir }) : nome); if (det) r.cells[0].append(el("small", { className: "det" + (det.aviso ? " aviso" : ""), textContent: det.txt })); r.insertCell().append(el("b", { textContent: brl(v) })); r.cells[1].style.textAlign = "right"; };
       abas.forEach((a, idx) => {
@@ -255,6 +258,7 @@
 
   function secao(s, comTitulo) {
     if (s.tipo === "resumo") return resumo(s);
+    if (s.tipo === "quantidades") return quantidades(s);
     const box = el("section", { className: "sec" });
     const busca = el("input", { type: "search", placeholder: "Buscar…" });
     const lista = el("div");
@@ -336,11 +340,10 @@
           const refaz = () => {
             const ib = s.colunas.findIndex((c) => c.nome === "Só quem bebe?");
             const bebe = ib >= 0 && l[ib] === true, n = convidados(bebe), v = num(l[s.colunas.findIndex((c) => c.nome === "Valor por pessoa")]);
-            est.innerHTML = "";
-            if (!v || isNaN(v)) return;
-            if (bebe) est.append(el("small", { textContent: "Considera só os convidados que bebem" }));
-            [["Todos os convidados", n.todos], ["Chance 100%", n.c100], ["Chance 75% ou mais", n.c75]].forEach(([k, q]) =>
-              est.append(el("div", { innerHTML: `<span>${k} <small>(${q})</small></span><b>${brl(v * q)}</b>` })));
+            est.innerHTML = ""; est.hidden = !v || isNaN(v);
+            if (est.hidden) return;
+            est.append(el("div", { innerHTML: `<span>${n.conta} convidados × ${brl(v)}</span><b>${brl(v * n.conta)}</b>` }),
+              el("small", { textContent: `Maior entre chance ≥75% (${n.p75}) e confirmados (${n.conf})${bebe ? " · só quem bebe" : ""}. O valor fixo não soma quando há valor por pessoa.` }));
           };
           const ie = s.escolha ? col(s, "Escolhido") : -1;
           if (ie >= 0) {
@@ -360,6 +363,88 @@
     }
     busca.oninput = desenha;
     add.onclick = () => { s.linhas.push(novaLinha(s)); marcar(); Object.values(sel).forEach((x) => (x.value = "")); busca.value = ""; desenha(); const alvo = s.tipo === "tabela" ? lista.querySelector("tbody tr:last-child input") : lista.querySelector(".card:last-child .titulo"); alvo && alvo.focus(); };
+    desenha();
+    return box;
+  }
+
+  // Convidados por tipo, filtrando pela chance de comparecimento (base: todos / c100 / c75)
+  function publico(base) {
+    const g = abas.flatMap((a) => a.secoes).find((x) => x.guests);
+    const z = { Todos: 0, Adultos: 0, "Crianças": 0, "Quem bebe": 0 };
+    if (!g) return z;
+    const i = (n) => col(g, n), min = base === "c100" ? 100 : base === "c75" ? 75 : -Infinity;
+    g.linhas.filter((l) => String(l[0]).trim()).forEach((l) => {
+      const ch = num(l[i("Chance de comparecimento")]);
+      if ((isNaN(ch) ? -1 : ch) < min) return;
+      z.Todos++;
+      if (l[i("Tipo")] === "Criança") z["Crianças"]++; else z.Adultos++;
+      if (l[i("Bebe?")] === "Sim") z["Quem bebe"]++;
+    });
+    return z;
+  }
+  // Tela de quantidades: por pessoa × público (+ margem), agrupado por "Grupo"; itens editáveis
+  function quantidades(s) {
+    const box = el("section", { className: "sec quant" });
+    const I = (n) => col(s, n);
+    const fmt = (n, d = 2) => n.toLocaleString("pt-BR", { maximumFractionDigits: d });
+    const plural = (u, n) => (u === "garrafa" && n > 1 ? "garrafas" : u);
+    const base = el("select", { onchange: () => { s.base = base.value; marcar(); desenha(); } });
+    BASES.forEach(([k, t]) => base.append(el("option", { value: k, textContent: t }))); base.value = s.base || "todos";
+    const margem = el("input", { type: "number", min: 0, max: 100, step: 5, value: s.margem ?? 10, oninput: () => { const n = parseFloat(margem.value); s.margem = isNaN(n) ? 0 : Math.max(0, n); marcar(); calcula(); } });
+    const stats = el("div", { className: "stats" });
+    const lista = el("div");
+    const novoGrupo = (g) => { const l = novaLinha(s); l[I("Grupo")] = g; l[I("Para quem")] = "Todos"; s.linhas.push(l); marcar(); desenha(); lista.querySelector(`tr[data-r="${s.linhas.length - 1}"] input`)?.focus(); };
+    box.append(
+      el("div", { className: "ctrl" }, el("label", {}, "Convidados considerados", base), el("label", { className: "curto" }, "Margem de segurança (%)", margem)),
+      stats,
+      el("p", { className: "hint" }, "Números vindos da Lista de convidados (com a chance escolhida). A quantidade por pessoa segue referências de cerimonialistas e buffets — todos os campos são editáveis."),
+      el("div", { className: "sec__head" }, el("h2", { textContent: s.titulo }), el("button", { className: "btn", textContent: "+ Adicionar item", onclick: () => { const g = prompt("Grupo do novo item (ex.: 🍺 Bebidas):", "Outros"); if (g !== null) novoGrupo(g.trim() || "Outros"); } })),
+      lista,
+      el("p", { className: "ref", textContent: "Referências: casamentos.com.br, receiteria.com.br, valorfinal.com.br, Sescon (cálculo de comida e bebida em eventos). Base: festa de ~5 h com jantar." })
+    );
+    const linhasCalc = []; // [linha, célula total, célula comprar]
+    function calcula() {
+      const P = publico(s.base || "todos"), fator = 1 + (num(s.margem) || 0) / 100;
+      stats.innerHTML = "";
+      [["Todos", "Convidados"], ["Adultos", "Adultos"], ["Crianças", "Crianças"], ["Quem bebe", "Bebem"]].forEach(([k, t]) => stats.append(el("div", { className: "stat", innerHTML: `<b>${P[k]}</b><span>${t}</span>` })));
+      const th = box.querySelector("th.tt"); if (th) th.textContent = `Total (+${fmt(num(s.margem) || 0, 1)}%)`;
+      linhasCalc.forEach(([l, ct, cc]) => {
+        const pp = num(l[I("Por pessoa")]), u = String(l[I("Unidade")] ?? "").trim(), tam = num(l[I("Qtd. por embalagem")]);
+        ct.innerHTML = cc.innerHTML = "";
+        if (!pp || isNaN(pp)) return;
+        const t = pp * (P[l[I("Para quem")]] ?? P.Todos) * fator;
+        ct.append(el("b", { textContent: `${fmt(Math.round(t * 10) / 10, 1)} ${plural(u, t)}` }));
+        if (tam > 0) { const q = Math.ceil(t / tam); cc.append(el("b", { textContent: q }), el("small", { textContent: "× " + (String(l[I("Embalagem")]).trim() || `${fmt(tam)} ${u}`) })); }
+        else cc.append(el("b", { textContent: `${fmt(Math.ceil(t))} ${plural(u, Math.ceil(t))}` }));
+      });
+    }
+    function desenha() {
+      lista.innerHTML = ""; linhasCalc.length = 0;
+      const t = el("table", { className: "q" }); const h = t.createTHead().insertRow();
+      [["Item", 21], ["Por pessoa", 9], ["Unidade", 8], ["Para quem", 12], ["Embalagem", 13], ["Qtd. por emb.", 9], ["Total", 11, "tt"], ["Comprar", 13]].forEach(([n, w, c]) => h.append(el("th", { textContent: n, className: c || "", style: `width:${w}%` })));
+      h.append(el("th", { style: "width:44px" }));
+      const tb = t.createTBody();
+      const grupos = [...new Set(s.linhas.map((l) => String(l[I("Grupo")] ?? "").trim() || "Outros"))];
+      grupos.forEach((g) => {
+        const gr = tb.insertRow(); gr.className = "grp";
+        const gc = gr.insertCell(); gc.colSpan = 9;
+        gc.append(el("span", { textContent: g }), el("button", { className: "btn btn--ghost mini", textContent: "+ item", onclick: () => novoGrupo(g) }));
+        s.linhas.forEach((l, r) => {
+          if ((String(l[I("Grupo")] ?? "").trim() || "Outros") !== g) return;
+          const row = tb.insertRow(); row.dataset.r = r;
+          ["Item", "Por pessoa", "Unidade", "Para quem", "Embalagem", "Qtd. por embalagem"].forEach((n) => {
+            const c = s.colunas[I(n)];
+            row.insertCell().append(campo(c, l, I(n), { compacto: true, placeholder: n === "Embalagem" ? "—" : n === "Qtd. por embalagem" ? "—" : c.nome, onchange: calcula }));
+          });
+          const ct = row.insertCell(), cc = row.insertCell(); ct.className = "tot"; cc.className = "buy";
+          row.insertCell().append(el("button", { className: "x", title: "Excluir", textContent: "🗑", onclick: () => { if (confirm(`Excluir "${l[I("Item")]}"?`)) { s.linhas.splice(r, 1); marcar(); desenha(); } } }));
+          linhasCalc.push([l, ct, cc]);
+        });
+      });
+      if (!s.linhas.length) lista.append(el("div", { className: "vazio", textContent: "Nenhum item. Use “+ Adicionar item”." }));
+      else lista.append(el("div", { className: "tabela" }, t));
+      calcula();
+    }
     desenha();
     return box;
   }

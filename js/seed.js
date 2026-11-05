@@ -808,6 +808,209 @@ window.SEED = {
      "linhas": []
     }
    ]
+  },
+  {
+   "nome": "Quantidades",
+   "icone": "🧮",
+   "secoes": [
+    {
+     "titulo": "Itens",
+     "tipo": "quantidades",
+     "base": "c75",
+     "margem": 10,
+     "colunas": [
+      {
+       "nome": "Grupo",
+       "tipo": "texto"
+      },
+      {
+       "nome": "Item",
+       "tipo": "texto"
+      },
+      {
+       "nome": "Por pessoa",
+       "tipo": "numero"
+      },
+      {
+       "nome": "Unidade",
+       "tipo": "texto"
+      },
+      {
+       "nome": "Para quem",
+       "tipo": "opcoes",
+       "opcoes": [
+        "Todos",
+        "Adultos",
+        "Crianças",
+        "Quem bebe"
+       ]
+      },
+      {
+       "nome": "Embalagem",
+       "tipo": "texto"
+      },
+      {
+       "nome": "Qtd. por embalagem",
+       "tipo": "numero"
+      }
+     ],
+     "linhas": [
+      [
+       "🍺 Bebidas",
+       "Cerveja",
+       1.5,
+       "L",
+       "Quem bebe",
+       "Lata 350 ml",
+       0.35
+      ],
+      [
+       "🍺 Bebidas",
+       "Refrigerante",
+       0.6,
+       "L",
+       "Todos",
+       "Garrafa 2 L",
+       2
+      ],
+      [
+       "🍺 Bebidas",
+       "Água",
+       0.5,
+       "L",
+       "Todos",
+       "Garrafa 500 ml",
+       0.5
+      ],
+      [
+       "🍺 Bebidas",
+       "Suco",
+       0.3,
+       "L",
+       "Crianças",
+       "Garrafa 1 L",
+       1
+      ],
+      [
+       "🍺 Bebidas",
+       "Espumante (brinde)",
+       0.2,
+       "garrafa",
+       "Adultos",
+       "",
+       ""
+      ],
+      [
+       "🍺 Bebidas",
+       "Vinho",
+       0.25,
+       "garrafa",
+       "Quem bebe",
+       "",
+       ""
+      ],
+      [
+       "🍺 Bebidas",
+       "Destilados (drinks)",
+       0.2,
+       "L",
+       "Quem bebe",
+       "Garrafa 1 L",
+       1
+      ],
+      [
+       "🍺 Bebidas",
+       "Gelo",
+       1,
+       "kg",
+       "Todos",
+       "Saco 5 kg",
+       5
+      ],
+      [
+       "🍢 Comida",
+       "Salgados",
+       12,
+       "un.",
+       "Adultos",
+       "Cento",
+       100
+      ],
+      [
+       "🍢 Comida",
+       "Salgados (crianças)",
+       6,
+       "un.",
+       "Crianças",
+       "Cento",
+       100
+      ],
+      [
+       "🍢 Comida",
+       "Carne (prato principal)",
+       0.4,
+       "kg",
+       "Adultos",
+       "",
+       ""
+      ],
+      [
+       "🍢 Comida",
+       "Arroz",
+       0.06,
+       "kg",
+       "Todos",
+       "Pacote 5 kg",
+       5
+      ],
+      [
+       "🍰 Doces",
+       "Docinhos",
+       6,
+       "un.",
+       "Todos",
+       "Cento",
+       100
+      ],
+      [
+       "🍰 Doces",
+       "Bem-casados",
+       1.5,
+       "un.",
+       "Todos",
+       "",
+       ""
+      ],
+      [
+       "🍰 Doces",
+       "Bolo",
+       0.1,
+       "kg",
+       "Todos",
+       "",
+       ""
+      ],
+      [
+       "🥂 Mesa e descartáveis",
+       "Copos",
+       3,
+       "un.",
+       "Todos",
+       "Pacote 50",
+       50
+      ],
+      [
+       "🥂 Mesa e descartáveis",
+       "Guardanapos",
+       3,
+       "un.",
+       "Todos",
+       "Pacote 50",
+       50
+      ]
+     ]
+    }
+   ]
   }
  ]
 };
