@@ -100,3 +100,12 @@ th.ord{letter-spacing:0;overflow-wrap:normal}
   .app.recolhido .brand small,.app.recolhido .item span{display:inline}
   .app.recolhido .item{justify-content:flex-start;padding:9px 10px}
 }
+
+/* opção escolhida (vai para o total) */
+.escolher{font:600 .82rem Inter,sans-serif;border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:6px 12px;cursor:pointer;justify-self:start}
+.escolher:hover{border-color:var(--gold);color:var(--ink)}
+.escolher.on{background:var(--moss);border:1px solid var(--moss);color:#fff}
+.rec.escolhido{border:2px solid var(--moss);box-shadow:0 10px 30px -14px rgba(61,90,58,.55)}
+.soma.aviso{color:var(--muted);font-size:1.05rem}
+.det{display:block;color:var(--muted);font-size:.78rem;padding:0 16px}.det.aviso{color:var(--wine)}
+.sec__head .base{display:flex;align-items:center;gap:8px;font-size:.8rem}.sec__head .base select{width:auto}

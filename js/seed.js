@@ -47,27 +47,40 @@ window.SEED = {
       },
       {
        "nome": "Valor",
+       "tipo": "numero"
+      },
+      {
+       "nome": "Obs. do valor",
        "tipo": "texto"
       },
       {
        "nome": "Forma de pagamento",
        "tipo": "longo"
+      },
+      {
+       "nome": "Escolhido",
+       "tipo": "escolha"
       }
      ],
      "linhas": [
       [
        "Uberlândia",
        "São Cristóvão",
+       1600,
        "1 salário mínimo",
-       "Metada na entrada + metade até 30 dias antes - se for em 2026"
+       "Metada na entrada + metade até 30 dias antes - se for em 2026",
+       false
       ],
       [
        "Ps. Olegário",
        "Santa Rita",
        "",
-       ""
+       "",
+       "",
+       false
       ]
-     ]
+     ],
+     "escolha": true
     },
     {
      "titulo": "Extras",
@@ -79,52 +92,50 @@ window.SEED = {
       },
       {
        "nome": "Valor",
+       "tipo": "numero"
+      },
+      {
+       "nome": "Obs. do valor",
        "tipo": "texto"
+      },
+      {
+       "nome": "Incluir no total",
+       "tipo": "check"
       }
      ],
      "linhas": [
       [
        "Taxa de transferência dos documentos",
-       "R$50 a R$200"
+       "",
+       "R$50 a R$200",
+       false
       ],
       [
        "Curso de Noivos",
-       "?"
+       "",
+       "?",
+       false
       ],
       [
        "Decoração",
-       ""
+       "",
+       "",
+       false
       ],
       [
        "Fotografia",
-       ""
+       "",
+       "",
+       false
       ],
       [
        "Coral",
-       ""
+       "",
+       "",
+       false
       ]
-     ]
-    },
-    {
-     "titulo": "Valores",
-     "tipo": "cards",
-     "soma": true,
-     "colunas": [
-      {
-       "nome": "Descrição",
-       "tipo": "texto"
-      },
-      {
-       "nome": "Valor",
-       "tipo": "numero"
-      }
      ],
-     "linhas": [
-      [
-       "Igreja (1 salário mínimo)",
-       1600
-      ]
-     ]
+     "incluir": true
     }
    ]
   },
@@ -230,6 +241,10 @@ window.SEED = {
       {
        "nome": "Datas disponíveis",
        "tipo": "texto"
+      },
+      {
+       "nome": "Escolhido",
+       "tipo": "escolha"
       }
      ],
      "linhas": [
@@ -241,7 +256,8 @@ window.SEED = {
        "",
        "Pagamento 20% no ato do contrato e o restante até 1 semana antes da data locada",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Villa Sonhos",
@@ -251,7 +267,8 @@ window.SEED = {
        "",
        "",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Chacára Berro D'água",
@@ -261,7 +278,8 @@ window.SEED = {
        "",
        "",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Villa Terrê",
@@ -271,7 +289,8 @@ window.SEED = {
        "",
        "*Até 70 convidados",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Santa Felicitá",
@@ -281,7 +300,8 @@ window.SEED = {
        "",
        "",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Spaço Verde",
@@ -291,7 +311,8 @@ window.SEED = {
        "",
        "chácara+ buffet+ decoração ( 11 e 12 - se for só dormir não cobra nada, se for o dia todo mais 1k)",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Spaço Atrium Eventos",
@@ -301,7 +322,8 @@ window.SEED = {
        "",
        "",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Chácara Flamboyant",
@@ -311,7 +333,8 @@ window.SEED = {
        "",
        "Parcela em 10x - desconto de 5% em pagamento a vista",
        "Não",
-       ""
+       "",
+       false
       ],
       [
        "Chácara Panorama Lounge",
@@ -321,7 +344,8 @@ window.SEED = {
        "",
        "uma entrada de 3000,00 e 6x de 1166,66 e a vista 8500,00 - Ambas incluímos gerador e estacionamento",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Varanda das Colinas",
@@ -331,7 +355,8 @@ window.SEED = {
        "",
        "",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Casa do Bosque",
@@ -341,7 +366,8 @@ window.SEED = {
        "",
        "",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Chácara Green Hall",
@@ -351,7 +377,8 @@ window.SEED = {
        "",
        "Só enviam valores mediante a visita presencial",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Chácara Parnassus Eventos",
@@ -361,7 +388,8 @@ window.SEED = {
        "",
        "",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Panorama New Lounge",
@@ -371,7 +399,8 @@ window.SEED = {
        "",
        "entrada de  3300,00 e 6x 1283,33  ou  a vista 9350,00 - Ambas incluímos gerador e estacionamento",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Chácara 7",
@@ -381,7 +410,8 @@ window.SEED = {
        "",
        "Se for Domingo ou segunda - Não tem disponibilidade na data, só 1 fds antes ou dps.",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Quintal da Morada",
@@ -391,7 +421,8 @@ window.SEED = {
        "",
        "Contrato com entrada de 30% do total + o valor residual 1 semana antes do evento - não divide nem parcela",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Recanto da Lua",
@@ -401,7 +432,8 @@ window.SEED = {
        "",
        "",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Acrópole",
@@ -411,7 +443,8 @@ window.SEED = {
        "",
        "",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Alameda 855",
@@ -421,7 +454,8 @@ window.SEED = {
        "",
        "Espaço condicionado ao buffet e decoração - até 100 convidados",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Toque de arte",
@@ -431,7 +465,8 @@ window.SEED = {
        "",
        "",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Chacára Vovó Lourdes",
@@ -441,7 +476,8 @@ window.SEED = {
        "",
        "",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Chácara babilonia",
@@ -451,25 +487,11 @@ window.SEED = {
        "",
        "",
        "",
-       ""
+       "",
+       false
       ]
-     ]
-    },
-    {
-     "titulo": "Valores",
-     "tipo": "cards",
-     "soma": true,
-     "colunas": [
-      {
-       "nome": "Descrição",
-       "tipo": "texto"
-      },
-      {
-       "nome": "Valor",
-       "tipo": "numero"
-      }
      ],
-     "linhas": []
+     "escolha": true
     }
    ]
   },
@@ -496,6 +518,10 @@ window.SEED = {
       {
        "nome": "Diferenciais",
        "tipo": "longo"
+      },
+      {
+       "nome": "Escolhido",
+       "tipo": "escolha"
       }
      ],
      "linhas": [
@@ -503,43 +529,32 @@ window.SEED = {
        "Aline Vilela",
        "https://www.instagram.com/aline_vilelacerimonialista/",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Tatiane Martins",
        "https://www.instagram.com/tatianamartinscerimonial/?hl=pt-br",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Deise Cerimonial",
        "https://www.instagram.com/deisecerimonial/",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Cerimonial Lima Por Cristiellem Lima",
        "https://www.instagram.com/cerimoniallima/?g=5",
        "",
-       ""
+       "",
+       false
       ]
-     ]
-    },
-    {
-     "titulo": "Valores",
-     "tipo": "cards",
-     "soma": true,
-     "colunas": [
-      {
-       "nome": "Descrição",
-       "tipo": "texto"
-      },
-      {
-       "nome": "Valor",
-       "tipo": "numero"
-      }
      ],
-     "linhas": []
+     "escolha": true
     }
    ]
   },
@@ -570,6 +585,10 @@ window.SEED = {
       {
        "nome": "Diferenciais",
        "tipo": "longo"
+      },
+      {
+       "nome": "Escolhido",
+       "tipo": "escolha"
       }
      ],
      "linhas": [
@@ -578,47 +597,36 @@ window.SEED = {
        "https://www.instagram.com/stillusbuffetedecoracao/",
        "",
        "",
-       ""
+       "",
+       false
       ],
       [
        "BUFFET MARLY FESTAS",
        "https://www.instagram.com/marlyfestasbuffet/",
        "",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Buffet Emiliana Moraes",
        "https://www.instagram.com/buffetemilianamoraes/",
        "",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Bárbaros Buffet",
        "https://www.instagram.com/barbarosbuffet/",
        "",
        "",
-       ""
+       "",
+       false
       ]
      ],
-     "porPessoa": true
-    },
-    {
-     "titulo": "Valores",
-     "tipo": "cards",
-     "soma": true,
-     "colunas": [
-      {
-       "nome": "Descrição",
-       "tipo": "texto"
-      },
-      {
-       "nome": "Valor",
-       "tipo": "numero"
-      }
-     ],
-     "linhas": []
+     "porPessoa": true,
+     "escolha": true
     }
    ]
   },
@@ -653,6 +661,10 @@ window.SEED = {
       {
        "nome": "Só quem bebe?",
        "tipo": "check"
+      },
+      {
+       "nome": "Escolhido",
+       "tipo": "escolha"
       }
      ],
      "linhas": [
@@ -662,6 +674,7 @@ window.SEED = {
        "",
        "",
        "",
+       false,
        false
       ],
       [
@@ -670,26 +683,13 @@ window.SEED = {
        "https://www.instagram.com/chopperia_eventos/",
        "",
        "",
-       true
+       true,
+       false
       ]
      ],
-     "porPessoa": true
-    },
-    {
-     "titulo": "Valores",
-     "tipo": "cards",
-     "soma": true,
-     "colunas": [
-      {
-       "nome": "Descrição",
-       "tipo": "texto"
-      },
-      {
-       "nome": "Valor",
-       "tipo": "numero"
-      }
-     ],
-     "linhas": []
+     "porPessoa": true,
+     "escolha": true,
+     "escolhaPor": "Categoria"
     }
    ]
   },
