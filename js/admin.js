@@ -105,6 +105,11 @@
     marcar(sujo); montar();
   }
   $("logout").onclick = async () => { await api("logout"); sessionStorage.removeItem(SK); location.reload(); };
+  // Recolher o menu lateral (lembra a escolha neste navegador)
+  const app = $("app");
+  const recolhe = (v) => { app.classList.toggle("recolhido", v); $("recolher").textContent = v ? "»" : "«"; $("recolher").title = v ? "Expandir menu" : "Recolher menu"; try { localStorage.setItem("adm_recolhido", v ? "1" : ""); } catch {} };
+  try { recolhe(localStorage.getItem("adm_recolhido") === "1"); } catch {}
+  $("recolher").onclick = () => recolhe(!app.classList.contains("recolhido"));
   $("burger").onclick = () => $("side").classList.toggle("open");
 
   /* ---------- Menu ---------- */
@@ -113,7 +118,7 @@
     abas.forEach((a, i) => {
       const b = document.createElement("button");
       b.className = "item" + (i === atual ? " on" : "");
-      b.innerHTML = `<i>${a.icone || "📄"}</i>`; b.append(a.nome);
+      b.title = a.nome; b.innerHTML = `<i>${a.icone || "📄"}</i>`; b.append(el("span", { textContent: a.nome }));
       b.onclick = () => { atual = i; montar(); };
       nav.appendChild(b);
     });
