@@ -24,10 +24,13 @@ window.CONFIG = {
     mapsQuery: "Uberlândia, MG",
   },
 
-  // URL do Web App do Google Apps Script (veja README.md).
-  // Enquanto estiver vazio, o site funciona em "modo demonstração"
-  // e salva tudo apenas no navegador.
-  googleScriptUrl: "",
+  // Banco de dados (Supabase). A chave abaixo é PÚBLICA (feita para ficar no site):
+  // as tabelas são protegidas e só as funções do banco (supabase/schema.sql) ficam expostas.
+  // Se apagar a URL, o site volta ao "modo demonstração" (salva só no navegador).
+  supabase: {
+    url: "https://klnmsandpgpnjibdqpry.supabase.co",
+    chave: "sb_publishable_h9GQUTqockn1K2JBP2SOwA_n2sIaloD",
+  },
 
   pix: {
     chave: "andreethaiz@exemplo.com", // INVENTADO

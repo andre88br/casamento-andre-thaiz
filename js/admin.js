@@ -1,7 +1,13 @@
 (() => {
   "use strict";
-  const URL_API = (window.SITE_CONFIG || window.CONFIG || {}).googleScriptUrl || "";
-  const DEMO = !URL_API;
+  // Chama uma função do banco (Supabase)
+  const SB = (window.CONFIG || {}).supabase || {};
+  async function rpc(fn, corpo = {}) {
+    const res = await fetch(`${SB.url}/rest/v1/rpc/${fn}`, { method: "POST", headers: { apikey: SB.chave, "Content-Type": "application/json" }, body: JSON.stringify(corpo) });
+    if (!res.ok) throw new Error("Falha de conexão com o banco");
+    return res.json();
+  }
+  const DEMO = !SB.url;
   const $ = (id) => document.getElementById(id);
   const SK = "adm_token";
   let token = sessionStorage.getItem(SK) || "";
@@ -11,8 +17,7 @@
   /* ---------- API (com modo demonstração em localStorage) ---------- */
   async function api(acao, dados = {}) {
     if (DEMO) return demo(acao, dados);
-    const res = await fetch(URL_API, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ acao, token, ...dados }) });
-    return res.json();
+    return rpc("admin", { d: { acao, token, ...dados } });
   }
   function demo(acao, d) {
     const L = (k, v) => (v === undefined ? JSON.parse(localStorage.getItem("demo_" + k) || "null") : localStorage.setItem("demo_" + k, JSON.stringify(v)));
@@ -30,6 +35,7 @@
     if (acao === "salvarPlanilha") { const v = Date.now(); L("planilha", { versao: v, abas: d.abas }); return ok({ versao: v }); }
     if (acao === "usuarios") return ok({ usuarios: us.map((x) => ({ usuario: x.usuario, criadoEm: "", criadoPor: "" })), eu: L("sessao") });
     if (acao === "criarUsuario") { us.push({ usuario: d.novoUsuario.toLowerCase(), senha: d.novaSenha }); L("users", us); return ok(); }
+    if (acao === "respostas") return ok({ rsvp: [], recados: [], presentes: [] });
     if (acao === "excluirUsuario") { L("users", us.filter((x) => x.usuario !== d.alvo)); return ok(); }
     return { ok: false, erro: "ação inválida" };
   }
@@ -132,7 +138,7 @@
     let local = null; // o que foi salvo no modo demonstração deste navegador
     try { local = !DEMO && JSON.parse(localStorage.getItem("demo_planilha") || "null"); } catch {}
     if (p.abas && p.abas.length) { abas = p.abas.map(migrar); if (sincronizar()) sujo = true; }
-    else if (local && local.abas && local.abas.length && confirm("A planilha Google ainda está vazia, mas este navegador tem dados salvos no modo demonstração. Levar esses dados para a planilha?")) {
+    else if (local && local.abas && local.abas.length && confirm("O banco de dados ainda está vazio, mas este navegador tem dados salvos no modo demonstração. Levar esses dados para o banco?")) {
       abas = local.abas.map(migrar); sincronizar(); sujo = true; // primeira vez: leva o que estava só neste navegador
     }
     else { abas = clone(window.SEED.abas); sujo = true; } // primeira vez: carrega o conteúdo da planilha
@@ -158,17 +164,20 @@
       nav.appendChild(b);
     });
     $("m-usuarios").classList.toggle("on", atual === "usuarios");
+    $("m-respostas").classList.toggle("on", atual === "respostas");
     $("side").classList.remove("open");
     if (atual === "usuarios") { $("titulo").textContent = "Usuários"; return telaUsuarios(); }
+    if (atual === "respostas") { $("titulo").textContent = "📨 Respostas do site"; return telaRespostas(); }
     const a = abas[atual]; $("titulo").textContent = `${a.icone || ""} ${a.nome}`;
     const c = $("content"); c.innerHTML = "";
     a.secoes.forEach((s) => c.appendChild(secao(s, a.secoes.length > 1)));
   }
   $("m-usuarios").onclick = () => { atual = "usuarios"; montar(); };
+  $("m-respostas").onclick = () => { atual = "respostas"; montar(); };
 
   function marcar(s = true) { sujo = s; window.dispatchEvent(new Event("mudou")); $("salvar").disabled = !s; $("status").textContent = s ? "Alterações não salvas" : ""; }
-  // Aviso fixo quando não há planilha ligada (dados ficam só neste navegador)
-  if (DEMO) document.body.prepend(Object.assign(document.createElement("div"), { className: "demo-aviso", innerHTML: "⚠️ <b>Modo demonstração:</b> o que você salvar fica só neste navegador e não aparece em outras máquinas. Ligue a planilha Google (veja o README) para salvar de verdade." }));
+  // Aviso fixo quando não há banco ligado (dados ficam só neste navegador)
+  if (DEMO) document.body.prepend(Object.assign(document.createElement("div"), { className: "demo-aviso", innerHTML: "⚠️ <b>Modo demonstração:</b> o que você salvar fica só neste navegador e não aparece em outras máquinas. Configure o banco de dados (supabase em js/config.js) para salvar de verdade." }));
   window.addEventListener("beforeunload", (e) => { if (sujo) { e.preventDefault(); e.returnValue = ""; } });
 
   /* ---------- Componentes ---------- */
@@ -515,6 +524,35 @@
     });
     XLSX.writeFile(wb, "Casamento.xlsx");
   };
+
+  /* ---------- Respostas do site (RSVP, recados, presentes) ---------- */
+  async function telaRespostas() {
+    const c = $("content"); c.innerHTML = "";
+    c.append(el("p", { className: "hint", textContent: "Carregando…" }));
+    const r = await api("respostas");
+    if (atual !== "respostas") return;
+    c.innerHTML = "";
+    if (!r.ok) return c.append(el("p", { className: "erro", textContent: r.erro || "Erro ao carregar." }));
+    const data = (v) => (v ? new Date(v).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "");
+    const bloco = (titulo, tabela, linhas, cols, extra) => {
+      const box = el("section", { className: "sec" }, el("div", { className: "sec__head" }, el("h2", { textContent: `${titulo} (${linhas.length})` })));
+      if (!linhas.length) { box.append(el("div", { className: "vazio", textContent: "Nada recebido ainda." })); return c.append(box); }
+      const t = el("table", { className: "resp" }); const h = t.createTHead().insertRow();
+      cols.forEach(([n]) => h.append(el("th", { textContent: n }))); if (extra) h.append(el("th", { textContent: "Mural" })); h.append(el("th", { style: "width:44px" }));
+      const tb = t.createTBody();
+      linhas.forEach((l) => {
+        const row = tb.insertRow();
+        cols.forEach(([, f]) => row.insertCell().textContent = typeof f === "function" ? f(l) : l[f] ?? "");
+        if (extra) row.insertCell().append(extra(l));
+        row.insertCell().append(el("button", { className: "x", title: "Excluir", textContent: "🗑", onclick: async () => { if (confirm("Excluir esta resposta?")) { await api("excluirResposta", { tabela, id: l.id }); telaRespostas(); } } }));
+      });
+      box.append(el("div", { className: "tabela" }, t)); c.append(box);
+    };
+    bloco("Confirmações de presença", "rsvp", r.rsvp, [["Recebido", (l) => data(l.enviado_em)], ["Nome", "nome"], ["Presença", "presenca"], ["Filhos", "filhos"], ["Crianças", "criancas"], ["Criança paga meia?", "crianca_meia"], ["Telefone", "telefone"], ["E-mail", "email"], ["Time", "time"], ["Restrição", "restricao"], ["Mensagem", "mensagem"]]);
+    bloco("Recados", "recados", r.recados, [["Recebido", (l) => data(l.enviado_em)], ["Nome", "nome"], ["Time", "time"], ["Recado", "mensagem"]],
+      (l) => { const b = el("input", { type: "checkbox", checked: l.aprovado, title: "Aparece no mural do site" }); b.onchange = () => api("aprovarRecado", { id: l.id, aprovado: b.checked }); return b; });
+    bloco("Presentes", "presentes", r.presentes, [["Recebido", (l) => data(l.enviado_em)], ["Nome", "nome"], ["Presente", "presente"], ["Valor", "valor"], ["Mensagem", "mensagem"]]);
+  }
 
   /* ---------- Usuários ---------- */
   async function telaUsuarios() {

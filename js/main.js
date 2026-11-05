@@ -8,7 +8,14 @@
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const brl = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 });
   const esc = (s = "") => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const DEMO = !C.googleScriptUrl;
+  // Chama uma função do banco (Supabase)
+  const SB = C.supabase || {};
+  async function rpc(fn, corpo = {}) {
+    const res = await fetch(`${SB.url}/rest/v1/rpc/${fn}`, { method: "POST", headers: { apikey: SB.chave, "Content-Type": "application/json" }, body: JSON.stringify(corpo) });
+    if (!res.ok) throw new Error("Falha de conexão com o banco");
+    return res.json();
+  }
+  const DEMO = !SB.url;
 
   /* ---------------- Toast & confete ---------------- */
   const toastEl = $("#toast");
@@ -35,7 +42,7 @@
     }
   }
 
-  /* ---------------- Backend (Google Apps Script) ---------------- */
+  /* ---------------- Backend (banco Supabase) ---------------- */
   const store = {
     get: (k) => JSON.parse(localStorage.getItem("at_" + k) || "[]"),
     push: (k, v) => {
@@ -51,10 +58,9 @@
       await new Promise((r) => setTimeout(r, 700));
       return { ok: true, demo: true };
     }
-    // text/plain evita o preflight CORS do Apps Script
-    const res = await fetch(C.googleScriptUrl, { method: "POST", body: JSON.stringify(payload), headers: { "Content-Type": "text/plain;charset=utf-8" } });
-    if (!res.ok) throw new Error("Falha no envio");
-    return res.json().catch(() => ({ ok: true }));
+    const r = await rpc("enviar", { d: payload });
+    if (!r.ok) throw new Error(r.erro || "Falha no envio");
+    return r;
   }
 
   /* ---------------- Nav ---------------- */
@@ -424,8 +430,7 @@
       if (DEMO) {
         msgs = [...C.recadosExemplo, ...store.get("recado").map((r) => ({ ...r, data: r.enviadoEm }))];
       } else {
-        const res = await fetch(`${C.googleScriptUrl}?tipo=recados`);
-        msgs = await res.json();
+        msgs = await rpc("recados_publicos");
       }
     } catch {
       msgs = C.recadosExemplo;
@@ -458,5 +463,5 @@
   /* ---------------- Inicia reveals ---------------- */
   observe($$(".reveal"));
 
-  if (DEMO) console.info("%cModo demonstração: configure googleScriptUrl em js/config.js", "color:#b8924a");
+  if (DEMO) console.info("%cModo demonstração: configure supabase em js/config.js", "color:#b8924a");
 })();
