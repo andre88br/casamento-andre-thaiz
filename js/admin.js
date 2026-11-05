@@ -139,7 +139,7 @@
     let inp;
     const set = (v) => { linha[i] = v; marcar(); };
     if (col.tipo === "check") {
-      inp = el("input", { type: "checkbox", checked: !!linha[i] }); inp.onchange = () => set(inp.checked);
+      inp = el("input", { type: "checkbox", checked: !!linha[i] }); inp.onchange = () => { set(inp.checked); opts.onchange && opts.onchange(); };
       return opts.compacto ? inp : el("label", { className: "chk" }, inp, col.nome);
     }
     if (col.tipo === "opcoes") {
@@ -167,11 +167,12 @@
   const novaLinha = (s) => s.colunas.map((c) => (c.tipo === "check" ? false : c.tipo === "opcoes" ? c.opcoes[0] : ""));
 
   // Convidados: todos, com 100% de chance e com 75% ou mais
-  const convidados = () => {
+  const convidados = (soBebem = false) => {
     const g = abas.flatMap((a) => a.secoes).find((x) => x.guests);
     if (!g) return { todos: 0, c100: 0, c75: 0 };
     const ic = g.colunas.findIndex((c) => c.nome === "Chance de comparecimento");
-    const R = g.linhas.filter((l) => String(l[0]).trim());
+    const ib = g.colunas.findIndex((c) => c.nome === "Bebe?");
+    const R = g.linhas.filter((l) => String(l[0]).trim() && (!soBebem || l[ib] === "Sim"));
     const ch = (l) => { const n = num(l[ic]); return isNaN(n) ? -1 : n; };
     return { todos: R.length, c100: R.filter((l) => ch(l) >= 100).length, c75: R.filter((l) => ch(l) >= 75).length };
   };
@@ -263,9 +264,11 @@
           const cp = el("div", { className: "campos" });
           const est = el("div", { className: "est" });
           const refaz = () => {
-            const n = convidados(), v = num(l[s.colunas.findIndex((c) => c.nome === "Valor por pessoa")]);
+            const ib = s.colunas.findIndex((c) => c.nome === "Só quem bebe?");
+            const bebe = ib >= 0 && l[ib] === true, n = convidados(bebe), v = num(l[s.colunas.findIndex((c) => c.nome === "Valor por pessoa")]);
             est.innerHTML = "";
             if (!v || isNaN(v)) return;
+            if (bebe) est.append(el("small", { textContent: "Considera só os convidados que bebem" }));
             [["Todos os convidados", n.todos], ["Chance 100%", n.c100], ["Chance 75% ou mais", n.c75]].forEach(([k, q]) =>
               est.append(el("div", { innerHTML: `<span>${k} <small>(${q})</small></span><b>${brl(v * q)}</b>` })));
           };

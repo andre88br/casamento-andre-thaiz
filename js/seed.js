@@ -649,6 +649,10 @@ window.SEED = {
       {
        "nome": "Valor por pessoa",
        "tipo": "numero"
+      },
+      {
+       "nome": "Só quem bebe?",
+       "tipo": "check"
       }
      ],
      "linhas": [
@@ -657,14 +661,16 @@ window.SEED = {
        "",
        "",
        "",
-       ""
+       "",
+       false
       ],
       [
        "Choperia Eventos",
        "",
        "https://www.instagram.com/chopperia_eventos/",
        "",
-       ""
+       "",
+       true
       ]
      ],
      "porPessoa": true
