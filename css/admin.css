@@ -109,3 +109,19 @@ th.ord{letter-spacing:0;overflow-wrap:normal}
 .soma.aviso{color:var(--muted);font-size:1.05rem}
 .det{display:block;color:var(--muted);font-size:.78rem;padding:0 16px}.det.aviso{color:var(--wine)}
 .sec__head .base{display:flex;align-items:center;gap:8px;font-size:.8rem}.sec__head .base select{width:auto}
+
+/* quantidades */
+.quant{display:grid;gap:12px}
+.quant .ctrl{display:flex;flex-wrap:wrap;gap:12px;align-items:end}.quant .ctrl label{min-width:200px}.quant .ctrl .curto{min-width:150px;max-width:180px}
+.quant .stats{margin:0}.quant .sec__head{margin:8px 0 0}
+table.q{min-width:900px}
+table.q td{padding:4px 6px;vertical-align:middle}
+table.q td input,table.q td select{border-color:var(--line);background:#fff}
+table.q tr.grp td{background:var(--cream);font:600 1.15rem "Cormorant Garamond",serif;padding:8px 10px}
+table.q tr.grp td span{margin-right:10px}
+.btn.mini{font:600 .75rem Inter,sans-serif;padding:3px 10px}
+table.q .tot,table.q .buy,table.q th.tt,table.q th:nth-child(8){text-align:right}
+table.q .buy b,table.q .buy small{display:block}table.q .buy small{color:var(--muted);font-size:.75rem}
+.ref{font-size:.78rem;color:var(--muted);margin:0}
+.content,.quant{grid-template-columns:minmax(0,1fr)}
+@media(max-width:800px){.app,.app.recolhido{grid-template-columns:minmax(0,1fr)}}
