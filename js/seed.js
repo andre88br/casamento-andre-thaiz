@@ -876,7 +876,7 @@ window.SEED = {
       [
        "🍺 Bebidas",
        "Água",
-       0.5,
+       0.6,
        "L",
        "Todos",
        "Garrafa 500 ml",
@@ -912,7 +912,7 @@ window.SEED = {
       [
        "🍺 Bebidas",
        "Destilados (drinks)",
-       0.2,
+       0.15,
        "L",
        "Quem bebe",
        "Garrafa 1 L",
@@ -928,52 +928,16 @@ window.SEED = {
        5
       ],
       [
-       "🍢 Comida",
-       "Salgados",
-       12,
-       "un.",
-       "Adultos",
-       "Cento",
-       100
-      ],
-      [
-       "🍢 Comida",
-       "Salgados (crianças)",
-       6,
-       "un.",
-       "Crianças",
-       "Cento",
-       100
-      ],
-      [
-       "🍢 Comida",
-       "Carne (prato principal)",
-       0.4,
-       "kg",
-       "Adultos",
-       "",
-       ""
-      ],
-      [
-       "🍢 Comida",
-       "Arroz",
-       0.06,
-       "kg",
-       "Todos",
-       "Pacote 5 kg",
-       5
-      ],
-      [
-       "🍰 Doces",
+       "🍰 Doces e lembrancinhas",
        "Docinhos",
-       6,
+       5,
        "un.",
        "Todos",
        "Cento",
        100
       ],
       [
-       "🍰 Doces",
+       "🍰 Doces e lembrancinhas",
        "Bem-casados",
        1.5,
        "un.",
@@ -982,9 +946,9 @@ window.SEED = {
        ""
       ],
       [
-       "🍰 Doces",
+       "🍰 Doces e lembrancinhas",
        "Bolo",
-       0.1,
+       0.06,
        "kg",
        "Todos",
        "",
@@ -1008,7 +972,9 @@ window.SEED = {
        "Pacote 50",
        50
       ]
-     ]
+     ],
+     "versao": 2,
+     "nota": "O buffet já serve o almoço completo (entradas, carnes, acompanhamentos, sobremesa e frutas): aqui entra só o que vem à parte."
     }
    ]
   }
