@@ -256,6 +256,7 @@
     }
     const data = Object.fromEntries(new FormData(rsvp));
     if (data.presenca === "nao") { data.filhos = "0"; data.criancas = ""; }
+    if (data.filhos === "0") data.criancaMeia = "";
     btn.disabled = true;
     btn.textContent = "Processando check-in…";
     try {

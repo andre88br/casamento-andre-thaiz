@@ -4,7 +4,7 @@
  * Instruções de instalação: veja README.md
  */
 const ABAS = {
-  rsvp: ["enviadoEm", "nome", "email", "telefone", "presenca", "filhos", "criancas", "time", "restricao", "mensagem"],
+  rsvp: ["enviadoEm", "nome", "email", "telefone", "presenca", "filhos", "criancas", "criancaMeia", "time", "restricao", "mensagem"],
   recado: ["enviadoEm", "nome", "time", "mensagem", "aprovado"],
   presente: ["enviadoEm", "nome", "presenteId", "presente", "valor", "mensagem"],
 };
