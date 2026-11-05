@@ -129,9 +129,15 @@
     if (usuario) $("eu").textContent = usuario;
     else api("usuarios").then((u) => u.ok && ($("eu").textContent = u.eu));
     versao = p.versao || 0; atual = 0; sujo = false;
+    let local = null; // o que foi salvo no modo demonstração deste navegador
+    try { local = !DEMO && JSON.parse(localStorage.getItem("demo_planilha") || "null"); } catch {}
     if (p.abas && p.abas.length) { abas = p.abas.map(migrar); if (sincronizar()) sujo = true; }
+    else if (local && local.abas && local.abas.length && confirm("A planilha Google ainda está vazia, mas este navegador tem dados salvos no modo demonstração. Levar esses dados para a planilha?")) {
+      abas = local.abas.map(migrar); sincronizar(); sujo = true; // primeira vez: leva o que estava só neste navegador
+    }
     else { abas = clone(window.SEED.abas); sujo = true; } // primeira vez: carrega o conteúdo da planilha
     marcar(sujo); montar();
+    if (DEMO) $("status").textContent = "⚠️ Modo demonstração: salva só neste navegador";
   }
   $("logout").onclick = async () => { await api("logout"); sessionStorage.removeItem(SK); location.reload(); };
   // Recolher o menu lateral (lembra a escolha neste navegador)
@@ -161,6 +167,8 @@
   $("m-usuarios").onclick = () => { atual = "usuarios"; montar(); };
 
   function marcar(s = true) { sujo = s; window.dispatchEvent(new Event("mudou")); $("salvar").disabled = !s; $("status").textContent = s ? "Alterações não salvas" : ""; }
+  // Aviso fixo quando não há planilha ligada (dados ficam só neste navegador)
+  if (DEMO) document.body.prepend(Object.assign(document.createElement("div"), { className: "demo-aviso", innerHTML: "⚠️ <b>Modo demonstração:</b> o que você salvar fica só neste navegador e não aparece em outras máquinas. Ligue a planilha Google (veja o README) para salvar de verdade." }));
   window.addEventListener("beforeunload", (e) => { if (sujo) { e.preventDefault(); e.returnValue = ""; } });
 
   /* ---------- Componentes ---------- */

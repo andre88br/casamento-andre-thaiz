@@ -43,4 +43,4 @@ Planejamento do casamento com login e um menu lateral por aba da planilha (Total
 4. Menu **Quantidades**: calcula bebidas, comida, doces e descartáveis por pessoa (com base na Lista de convidados e na chance de comparecimento), com margem de segurança e quantas embalagens comprar. Itens editáveis e novos itens via *+ Adicionar item*.
 5. Menu **Usuários**: crie outros acessos. Edite os itens em cada menu e clique **Salvar**. Em **Lista de convidados** use *Importar convidados do .xlsx* (uma vez; os nomes não ficam no repositório). **Exportar .xlsx** gera a planilha.
 
-Os dados ficam só na sua planilha Google (não no repositório). Senhas são guardadas com hash + salt. Sem `googleScriptUrl` a página roda em modo demonstração (localStorage, sem segurança real).
+Os dados ficam só na sua planilha Google (não no repositório). Senhas são guardadas com hash + salt. Sem `googleScriptUrl` a página roda em modo demonstração (localStorage, sem segurança real), com um aviso vermelho no topo. Ao ligar a planilha, abra o admin no navegador onde você já tinha salvo: ele oferece levar esses dados para a planilha.
