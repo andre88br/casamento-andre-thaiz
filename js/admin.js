@@ -139,7 +139,7 @@
     let inp;
     const set = (v) => { linha[i] = v; marcar(); };
     if (col.tipo === "check") {
-      inp = el("input", { type: "checkbox", checked: !!linha[i] }); inp.onchange = () => set(inp.checked);
+      inp = el("input", { type: "checkbox", checked: !!linha[i] }); inp.onchange = () => { set(inp.checked); opts.onchange && opts.onchange(); };
       return opts.compacto ? inp : el("label", { className: "chk" }, inp, col.nome);
     }
     if (col.tipo === "opcoes") {
@@ -153,7 +153,10 @@
       inp = el("input", { value: linha[i] ?? "", placeholder: opts.placeholder || "" });
       if (col.tipo === "telefone") { inp.type = "tel"; inp.autocomplete = "off"; inp.placeholder = opts.placeholder || "(34) 99999-9999"; }
       if (col.tipo === "email") { inp.type = "email"; inp.autocomplete = "off"; inp.placeholder = opts.placeholder || "nome@email.com"; }
-      if (col.tipo === "numero") { inp.inputMode = "decimal"; inp.oninput = () => { const n = num(inp.value); set(inp.value.trim() !== "" && !isNaN(n) && /^[\d.,\s]+$/.test(inp.value) ? n : inp.value); opts.onchange && opts.onchange(); }; }
+      if (col.tipo === "percentual") {
+        inp.type = "number"; inp.min = 0; inp.max = 100; inp.step = 5; inp.placeholder = opts.compacto ? "%" : "0 a 100 (%)";
+        inp.oninput = () => { const n = parseFloat(inp.value); set(inp.value === "" || isNaN(n) ? "" : Math.min(100, Math.max(0, n))); opts.onchange && opts.onchange(); };
+      } else if (col.tipo === "numero") { inp.inputMode = "decimal"; inp.oninput = () => { const n = num(inp.value); set(inp.value.trim() !== "" && !isNaN(n) && /^[\d.,\s]+$/.test(inp.value) ? n : inp.value); opts.onchange && opts.onchange(); }; }
       else inp.oninput = () => set(inp.value);
     }
     if (opts.compacto) return inp;
@@ -163,9 +166,15 @@
   }
   const novaLinha = (s) => s.colunas.map((c) => (c.tipo === "check" ? false : c.tipo === "opcoes" ? c.opcoes[0] : ""));
 
-  const convidados = () => {
+  // Convidados: todos, com 100% de chance e com 75% ou mais
+  const convidados = (soBebem = false) => {
     const g = abas.flatMap((a) => a.secoes).find((x) => x.guests);
-    return g ? g.linhas.filter((l) => String(l[0]).trim()).length : 0;
+    if (!g) return { todos: 0, c100: 0, c75: 0 };
+    const ic = g.colunas.findIndex((c) => c.nome === "Chance de comparecimento");
+    const ib = g.colunas.findIndex((c) => c.nome === "Bebe?");
+    const R = g.linhas.filter((l) => String(l[0]).trim() && (!soBebem || l[ib] === "Sim"));
+    const ch = (l) => { const n = num(l[ic]); return isNaN(n) ? -1 : n; };
+    return { todos: R.length, c100: R.filter((l) => ch(l) >= 100).length, c75: R.filter((l) => ch(l) >= 75).length };
   };
   function somaSecao(s) {
     const i = s.colunas.findIndex((c) => c.tipo === "numero");
@@ -223,7 +232,7 @@
       const R = s.linhas.filter((l) => String(l[0]).trim());
       const n = (nome, v) => R.filter((l) => l[idx(nome)] === v).length;
       stats.innerHTML = "";
-      [["Total", R.length], ["Adultos", n("Tipo", "Adulto")], ["Crianças", n("Tipo", "Criança")], ["Noiva", n("De quem", "NOIVA")], ["Noivo", n("De quem", "NOIVO")], ["Confirmados", n("Confirmação", "Confirmado")], ["Pendentes", R.filter((l) => !l[idx("Confirmação")] || l[idx("Confirmação")] === "Pendente").length]]
+      [["Total", R.length], ["Adultos", n("Tipo", "Adulto")], ["Crianças", n("Tipo", "Criança")], ["Noiva", n("De quem", "NOIVA")], ["Noivo", n("De quem", "NOIVO")], ["Confirmados", n("Confirmação", "Confirmado")], ["Chance 100%", convidados().c100], ["Chance ≥75%", convidados().c75], ["Bebem", n("Bebe?", "Sim")], ["Pendentes", R.filter((l) => !l[idx("Confirmação")] || l[idx("Confirmação")] === "Pendente").length]]
         .forEach(([k, v]) => stats.append(el("div", { className: "stat", innerHTML: `<b>${v}</b><span>${k}</span>` })));
     }
     function visivel(l) {
@@ -253,10 +262,15 @@
           const ti = campo({ ...s.colunas[0], tipo: "texto" }, l, 0, { compacto: true, placeholder: s.colunas[0].nome }); ti.className = "titulo"; card.append(ti);
           card.append(el("button", { className: "del", title: "Excluir", textContent: "🗑", onclick: () => { if (confirm("Excluir este item?")) { s.linhas.splice(r, 1); marcar(); desenha(); } } }));
           const cp = el("div", { className: "campos" });
-          const est = el("p", { className: "hint" });
+          const est = el("div", { className: "est" });
           const refaz = () => {
-            const n = convidados(), v = num(l[s.colunas.findIndex((c) => c.nome === "Valor por pessoa")]);
-            est.textContent = n && v ? `Estimativa para ${n} convidados: ${brl(v * n)}` : "";
+            const ib = s.colunas.findIndex((c) => c.nome === "Só quem bebe?");
+            const bebe = ib >= 0 && l[ib] === true, n = convidados(bebe), v = num(l[s.colunas.findIndex((c) => c.nome === "Valor por pessoa")]);
+            est.innerHTML = "";
+            if (!v || isNaN(v)) return;
+            if (bebe) est.append(el("small", { textContent: "Considera só os convidados que bebem" }));
+            [["Todos os convidados", n.todos], ["Chance 100%", n.c100], ["Chance 75% ou mais", n.c75]].forEach(([k, q]) =>
+              est.append(el("div", { innerHTML: `<span>${k} <small>(${q})</small></span><b>${brl(v * q)}</b>` })));
           };
           s.colunas.forEach((c, i) => { if (i) cp.append(campo(c, l, i, { onchange: () => { atualizaSoma(); refaz(); } })); });
           if (s.porPessoa) { refaz(); cp.append(est); }
