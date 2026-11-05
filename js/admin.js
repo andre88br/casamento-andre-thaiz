@@ -105,6 +105,11 @@
     marcar(sujo); montar();
   }
   $("logout").onclick = async () => { await api("logout"); sessionStorage.removeItem(SK); location.reload(); };
+  // Recolher o menu lateral (lembra a escolha neste navegador)
+  const app = $("app");
+  const recolhe = (v) => { app.classList.toggle("recolhido", v); $("recolher").textContent = v ? "»" : "«"; $("recolher").title = v ? "Expandir menu" : "Recolher menu"; try { localStorage.setItem("adm_recolhido", v ? "1" : ""); } catch {} };
+  try { recolhe(localStorage.getItem("adm_recolhido") === "1"); } catch {}
+  $("recolher").onclick = () => recolhe(!app.classList.contains("recolhido"));
   $("burger").onclick = () => $("side").classList.toggle("open");
 
   /* ---------- Menu ---------- */
@@ -113,7 +118,7 @@
     abas.forEach((a, i) => {
       const b = document.createElement("button");
       b.className = "item" + (i === atual ? " on" : "");
-      b.innerHTML = `<i>${a.icone || "📄"}</i>`; b.append(a.nome);
+      b.title = a.nome; b.innerHTML = `<i>${a.icone || "📄"}</i>`; b.append(el("span", { textContent: a.nome }));
       b.onclick = () => { atual = i; montar(); };
       nav.appendChild(b);
     });
@@ -211,6 +216,7 @@
     const stats = el("div", { className: "stats" });
     const filtros = el("div", { className: "filtros" });
     const sel = {};
+    let ord = { i: -1, dir: 1 };
     const add = el("button", { className: "btn", textContent: "+ Adicionar" });
     const head = el("div", { className: "sec__head" }, el("h2", { textContent: comTitulo || s.guests ? s.titulo : "" }));
     if (s.linhas.length > 5 || s.guests) head.append(busca);
@@ -243,10 +249,22 @@
     function desenha() {
       lista.innerHTML = ""; atualizaSoma(); atualizaStats();
       const itens = s.linhas.map((l, r) => [l, r]).filter(([l]) => visivel(l));
+      if (ord.i >= 0) {
+        const numerico = ["numero", "percentual"].includes(s.colunas[ord.i].tipo);
+        const vazio = (v) => v === "" || v === undefined || v === null || (numerico && isNaN(num(v)));
+        itens.sort(([a], [b]) => {
+          if (vazio(a[ord.i]) || vazio(b[ord.i])) return vazio(a[ord.i]) - vazio(b[ord.i]); // vazios sempre no fim
+          const c = numerico ? num(a[ord.i]) - num(b[ord.i]) : String(a[ord.i]).localeCompare(String(b[ord.i]), "pt-BR", { sensitivity: "base", numeric: true });
+          return c * ord.dir;
+        });
+      }
       if (!itens.length) { lista.append(el("div", { className: "vazio", textContent: s.linhas.length ? "Nada encontrado." : "Nada por aqui ainda. Use “+ Adicionar”." })); if (s.guests && !s.linhas.length) lista.append(importarConvidados(s, desenha)); return; }
       if (s.tipo === "tabela") {
         const t = el("table"); const tr = t.createTHead().insertRow();
-        s.colunas.forEach((c) => tr.append(el("th", { textContent: c.nome }))); tr.append(el("th"));
+        const W = { Tipo: 8, Categoria: 10, "De quem": 8, "Confirmação": 12, "Chance de comparecimento": 11, "Bebe?": 7 };
+        const larg = (c) => (W[c.nome] ? W[c.nome] + "%" : c.tipo === "opcoes" ? "9%" : c.tipo === "percentual" ? "10%" : c.tipo === "telefone" ? "11%" : c.tipo === "email" ? "16%" : c.tipo === "numero" ? "10%" : "");
+        s.colunas.forEach((c, i) => tr.append(el("th", { className: "ord" + (ord.i === i ? " on" : ""), style: larg(c) ? `width:${larg(c)}` : "", title: "Clique para ordenar", textContent: c.nome + (ord.i === i ? (ord.dir > 0 ? " ▲" : " ▼") : ""), onclick: () => { ord = ord.i === i ? (ord.dir > 0 ? { i, dir: -1 } : { i: -1, dir: 1 }) : { i, dir: 1 }; desenha(); } })));
+        tr.append(el("th", { style: "width:44px" }));
         const tb = t.createTBody();
         itens.forEach(([l, r]) => {
           const row = tb.insertRow();
