@@ -71,6 +71,7 @@
     return { nome: a.nome, icone: "📄", secoes: [{ titulo: a.nome, tipo: "cards", colunas: l[0].map((n) => ({ nome: n || "Campo", tipo: "texto" })), linhas: l.slice(1) }] };
   }
   // Atualiza dados já salvos para a estrutura atual (colunas/seções novas), preservando o conteúdo.
+  const QTD_PADRAO_V1 = ["Cerveja", "Refrigerante", "Água", "Suco", "Espumante (brinde)", "Vinho", "Destilados (drinks)", "Gelo", "Salgados", "Salgados (crianças)", "Carne (prato principal)", "Arroz", "Docinhos", "Bem-casados", "Bolo", "Copos", "Guardanapos"];
   function sincronizar() {
     let mudou = false;
     const tot = abas.find((a) => a.nome === "Total");
@@ -87,6 +88,12 @@
         const sec = aba.secoes.find((x) => x.titulo === ss.titulo);
         if (!sec) { const nova = clone(ss); if (nova.titulo === "Valores") nova.linhas = []; aba.secoes.push(nova); return (mudou = true); }
         ["porPessoa", "soma", "guests", "escolha", "escolhaPor", "incluir"].forEach((k) => { if (ss[k] && !sec[k]) { sec[k] = ss[k]; mudou = true; } });
+        // Quantidades: lista padrão revisada (ex.: almoço já servido pelo buffet) — troca os itens padrão antigos e mantém os que vocês criaram
+        if (ss.tipo === "quantidades" && (sec.versao || 1) < ss.versao) {
+          const padrao = new Set([...QTD_PADRAO_V1, ...ss.linhas.map((l) => l[1])]);
+          sec.linhas = [...clone(ss.linhas), ...sec.linhas.filter((l) => !padrao.has(String(l[1]).trim()))];
+          sec.versao = ss.versao; sec.nota = ss.nota; mudou = true;
+        }
         if (ss.colunas.every((c, i) => sec.colunas[i] && sec.colunas[i].nome === c.nome && sec.colunas[i].tipo === c.tipo) && ss.colunas.length === sec.colunas.length) return;
         const antigos = sec.colunas.map((c) => c.nome);
         const iv = ss.colunas.findIndex((c) => c.nome === "Valor" && c.tipo === "numero"), io = ss.colunas.findIndex((c) => c.nome === "Obs. do valor");
@@ -397,10 +404,11 @@
     box.append(
       el("div", { className: "ctrl" }, el("label", {}, "Convidados considerados", base), el("label", { className: "curto" }, "Margem de segurança (%)", margem)),
       stats,
+      s.nota ? el("p", { className: "nota", textContent: "🍽️ " + s.nota }) : "",
       el("p", { className: "hint" }, "Números vindos da Lista de convidados (com a chance escolhida). A quantidade por pessoa segue referências de cerimonialistas e buffets — todos os campos são editáveis."),
       el("div", { className: "sec__head" }, el("h2", { textContent: s.titulo }), el("button", { className: "btn", textContent: "+ Adicionar item", onclick: () => { const g = prompt("Grupo do novo item (ex.: 🍺 Bebidas):", "Outros"); if (g !== null) novoGrupo(g.trim() || "Outros"); } })),
       lista,
-      el("p", { className: "ref", textContent: "Referências: casamentos.com.br, receiteria.com.br, valorfinal.com.br, Sescon (cálculo de comida e bebida em eventos). Base: festa de ~5 h com jantar." })
+      el("p", { className: "ref", textContent: "Referências: casamentos.com.br, receiteria.com.br, valorfinal.com.br, Sescon (cálculo de comida e bebida em eventos). Base: almoço de ~5 h com comida e sobremesa pelo buffet." })
     );
     const linhasCalc = []; // [linha, célula total, célula comprar]
     function calcula() {

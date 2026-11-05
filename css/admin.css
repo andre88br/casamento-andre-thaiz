@@ -125,3 +125,4 @@ table.q .buy b,table.q .buy small{display:block}table.q .buy small{color:var(--m
 .ref{font-size:.78rem;color:var(--muted);margin:0}
 .content,.quant{grid-template-columns:minmax(0,1fr)}
 @media(max-width:800px){.app,.app.recolhido{grid-template-columns:minmax(0,1fr)}}
+.nota{margin:0;background:#eef2ec;border:1px solid #cfdac9;color:var(--moss);border-radius:10px;padding:8px 12px;font-size:.88rem}
