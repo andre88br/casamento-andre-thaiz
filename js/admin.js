@@ -86,12 +86,34 @@
       seedAba.secoes.forEach((ss) => {
         const sec = aba.secoes.find((x) => x.titulo === ss.titulo);
         if (!sec) { const nova = clone(ss); if (nova.titulo === "Valores") nova.linhas = []; aba.secoes.push(nova); return (mudou = true); }
-        ["porPessoa", "soma", "guests"].forEach((k) => { if (ss[k] && !sec[k]) { sec[k] = ss[k]; mudou = true; } });
-        if (ss.colunas.every((c, i) => sec.colunas[i] && sec.colunas[i].nome === c.nome) && ss.colunas.length === sec.colunas.length) return;
+        ["porPessoa", "soma", "guests", "escolha", "escolhaPor", "incluir"].forEach((k) => { if (ss[k] && !sec[k]) { sec[k] = ss[k]; mudou = true; } });
+        if (ss.colunas.every((c, i) => sec.colunas[i] && sec.colunas[i].nome === c.nome && sec.colunas[i].tipo === c.tipo) && ss.colunas.length === sec.colunas.length) return;
         const antigos = sec.colunas.map((c) => c.nome);
-        sec.linhas = sec.linhas.map((l) => ss.colunas.map((c) => { const j = antigos.indexOf(c.nome); return j >= 0 ? l[j] : c.tipo === "check" ? false : ""; }));
+        const iv = ss.colunas.findIndex((c) => c.nome === "Valor" && c.tipo === "numero"), io = ss.colunas.findIndex((c) => c.nome === "Obs. do valor");
+        sec.linhas = sec.linhas.map((l) => {
+          const n = ss.colunas.map((c) => { const j = antigos.indexOf(c.nome); return j >= 0 ? l[j] : ["check", "escolha"].includes(c.tipo) ? false : ""; });
+          // "Valor" virou número: textos como "1 salário mínimo" vão para "Obs. do valor"
+          if (iv >= 0 && io >= 0 && typeof n[iv] === "string" && n[iv].trim() && !/^[\d.,\s]+$/.test(n[iv])) { n[io] = n[io] || n[iv]; n[iv] = ""; }
+          return n;
+        });
         sec.colunas = clone(ss.colunas); mudou = true;
       });
+      // Menus com opções não têm mais a seção "Valores": cada valor vai para a opção que ele cita (se estiver sem valor)
+      // ou, se não achar, para "Outros custos" (nada se perde)
+      if (!seedAba.secoes.some((x) => x.titulo === "Valores")) {
+        const v = aba.secoes.find((x) => x.titulo === "Valores");
+        if (v) {
+          const outros = tot && tot.secoes.find((x) => x.titulo === "Outros custos");
+          const op = aba.secoes.find((x) => x.escolha), iv = op ? col(op, "Valor") : -1;
+          v.linhas.filter((l) => String(l[0]).trim() || num(l[1])).forEach((l) => {
+            const d = String(l[0]).toLowerCase();
+            const alvo = iv >= 0 && op.linhas.find((r) => !String(r[iv]).trim() && r.some((c, k) => k !== iv && typeof c === "string" && c.trim().length >= 4 && !isUrl(c) && d.includes(c.trim().toLowerCase())));
+            if (alvo && !isNaN(num(l[1]))) alvo[iv] = num(l[1]);
+            else if (outros) outros.linhas.push([`${aba.nome}: ${l[0]}`, l[1]]);
+          });
+          aba.secoes = aba.secoes.filter((x) => x !== v); mudou = true;
+        }
+      }
     });
     return mudou;
   }
@@ -169,7 +191,7 @@
     if (isUrl(linha[i])) wrap.append(el("a", { className: "lk", href: String(linha[i]).trim(), target: "_blank", rel: "noopener", textContent: "abrir link ↗" }));
     return wrap;
   }
-  const novaLinha = (s) => s.colunas.map((c) => (c.tipo === "check" ? false : c.tipo === "opcoes" ? c.opcoes[0] : ""));
+  const novaLinha = (s) => s.colunas.map((c) => (["check", "escolha"].includes(c.tipo) ? false : c.tipo === "opcoes" ? c.opcoes[0] : ""));
 
   // Convidados: todos, com 100% de chance e com 75% ou mais
   const convidados = (soBebem = false) => {
@@ -185,18 +207,42 @@
     const i = s.colunas.findIndex((c) => c.tipo === "numero");
     return s.linhas.reduce((t, l) => t + (num(l[i]) || 0), 0);
   }
+  // Base de convidados usada no "valor por pessoa" que vai para o total (fica salva no resumo da aba Total)
+  const BASES = [["todos", "Todos os convidados"], ["c100", "Chance 100%"], ["c75", "Chance 75% ou mais"]];
+  const cfgTotal = () => abas.find((a) => a.nome === "Total")?.secoes.find((x) => x.tipo === "resumo") || {};
+  const col = (s, nome) => s.colunas.findIndex((c) => c.nome === nome);
+  // Valor de uma opção: valor fixo + valor por pessoa × convidados (só os que bebem, se marcado)
+  function valorLinha(s, l) {
+    const ib = col(s, "Só quem bebe?"), vpp = num(l[col(s, "Valor por pessoa")]);
+    const fixo = num(l[col(s, "Valor")]) || 0;
+    return fixo + (vpp ? vpp * convidados(ib >= 0 && l[ib] === true)[cfgTotal().base || "todos"] : 0);
+  }
+  const escolhidas = (s) => s.linhas.filter((l) => l[col(s, "Escolhido")] === true);
+  // Total de um menu: opções escolhidas + extras marcados + listas de valores
+  function valorAba(a) {
+    let v = 0; const det = [];
+    a.secoes.forEach((s) => {
+      if (s.escolha) escolhidas(s).forEach((l) => { v += valorLinha(s, l); det.push(String(l[s.colunas.findIndex((c) => c.tipo === "texto" && c.nome !== "Local")] ?? l[0]).trim() || "(sem nome)"); });
+      else if (s.incluir) s.linhas.filter((l) => l[col(s, "Incluir no total")] === true).forEach((l) => { v += num(l[col(s, "Valor")]) || 0; det.push(String(l[0]).trim()); });
+      else if (s.soma && s.titulo === "Valores") v += somaSecao(s);
+    });
+    const temOpcoes = a.secoes.some((s) => s.escolha);
+    return { v, det, conta: temOpcoes || a.secoes.some((s) => s.soma && s.titulo === "Valores"), aviso: temOpcoes && !a.secoes.some((s) => s.escolha && escolhidas(s).length) };
+  }
   function resumo(s) {
-    const box = el("section", { className: "sec" }, el("div", { className: "sec__head" }, el("h2", { textContent: s.titulo })));
+    const base = el("select", { onchange: () => { s.base = base.value; marcar(); } });
+    BASES.forEach(([k, t]) => base.append(el("option", { value: k, textContent: t }))); base.value = s.base || "todos";
+    const box = el("section", { className: "sec" }, el("div", { className: "sec__head" }, el("h2", { textContent: s.titulo }), el("label", { className: "base" }, "Valores por pessoa calculados com", base)));
     const corpo = el("div", { className: "tabela" }); box.append(corpo);
     const desenha = () => {
       if (!box.isConnected && box.dataset.ok) return window.removeEventListener("mudou", desenha);
       box.dataset.ok = 1;
       let total = 0; const t = el("table", { style: "min-width:0" });
-      const add = (nome, v, ir) => { total += v; const r = t.insertRow(); r.insertCell().append(ir ? el("button", { className: "btn btn--ghost", textContent: nome, onclick: ir }) : nome); r.insertCell().append(el("b", { textContent: brl(v) })); r.cells[1].style.textAlign = "right"; };
+      const add = (nome, v, ir, det) => { total += v; const r = t.insertRow(); r.insertCell().append(ir ? el("button", { className: "btn btn--ghost", textContent: nome, onclick: ir }) : nome); if (det) r.cells[0].append(el("small", { className: "det" + (det.aviso ? " aviso" : ""), textContent: det.txt })); r.insertCell().append(el("b", { textContent: brl(v) })); r.cells[1].style.textAlign = "right"; };
       abas.forEach((a, idx) => {
         if (a.nome === "Total") return;
-        const v = a.secoes.filter((x) => x.titulo === "Valores").reduce((t2, x) => t2 + somaSecao(x), 0);
-        if (a.secoes.some((x) => x.titulo === "Valores")) add(`${a.icone || ""} ${a.nome}`, v, () => { atual = idx; montar(); });
+        const r = valorAba(a);
+        if (r.conta) add(`${a.icone || ""} ${a.nome}`, r.v, () => { atual = idx; montar(); }, r.aviso ? { txt: "nenhuma opção escolhida", aviso: true } : r.det.length ? { txt: r.det.join(" · ") } : null);
       });
       const outros = abas.find((a) => a.nome === "Total")?.secoes.find((x) => x.titulo === "Outros custos");
       if (outros) add("Outros custos", somaSecao(outros));
@@ -228,6 +274,12 @@
     box.append(lista, soma);
 
     function atualizaSoma() {
+      if (s.escolha) {
+        const e = escolhidas(s);
+        soma.textContent = e.length ? `Vai para o total: ${brl(e.reduce((t, l) => t + valorLinha(s, l), 0))}` : "Escolha uma opção para somar no total";
+        soma.classList.toggle("aviso", !e.length); return;
+      }
+      if (s.incluir) { soma.textContent = "Extras no total: " + brl(s.linhas.filter((l) => l[col(s, "Incluir no total")] === true).reduce((t, l) => t + (num(l[col(s, "Valor")]) || 0), 0)); return; }
       if (!s.soma) return;
       const i = s.colunas.findIndex((c) => c.tipo === "numero");
       soma.textContent = "Total: " + brl(s.linhas.reduce((t, l) => t + (num(l[i]) || 0), 0));
@@ -290,7 +342,16 @@
             [["Todos os convidados", n.todos], ["Chance 100%", n.c100], ["Chance 75% ou mais", n.c75]].forEach(([k, q]) =>
               est.append(el("div", { innerHTML: `<span>${k} <small>(${q})</small></span><b>${brl(v * q)}</b>` })));
           };
-          s.colunas.forEach((c, i) => { if (i) cp.append(campo(c, l, i, { onchange: () => { atualizaSoma(); refaz(); } })); });
+          const ie = s.escolha ? col(s, "Escolhido") : -1;
+          if (ie >= 0) {
+            const on = l[ie] === true; if (on) card.classList.add("escolhido");
+            const grupo = (x) => (s.escolhaPor ? String(x[col(s, s.escolhaPor)] ?? "").trim().toLowerCase() : "");
+            card.append(el("button", { className: "escolher" + (on ? " on" : ""), textContent: on ? "✓ Escolhida — vai para o total" : "Escolher esta opção", title: s.escolhaPor ? `Uma opção por ${s.escolhaPor.toLowerCase()}` : "Só uma opção vai para o total", onclick: () => {
+              if (!on) s.linhas.forEach((x) => { if (grupo(x) === grupo(l)) x[ie] = false; });
+              l[ie] = !on; marcar(); desenha();
+            } }));
+          }
+          s.colunas.forEach((c, i) => { if (i && i !== ie) cp.append(campo(c, l, i, { onchange: () => { atualizaSoma(); refaz(); } })); });
           if (s.porPessoa) { refaz(); cp.append(est); }
           card.append(cp); g.append(card);
         });
